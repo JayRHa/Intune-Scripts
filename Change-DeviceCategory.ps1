@@ -6,7 +6,7 @@ Description:
 The script helps you to change the category of an intune device
 Release notes:
 Version 1.0: Init
-#>
+#> 
 
 Connect-MSGraph
 Update-MSGraphEnvironment -SchemaVersion 'beta'
