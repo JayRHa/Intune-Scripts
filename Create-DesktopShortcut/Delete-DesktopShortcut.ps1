@@ -11,4 +11,4 @@ Version 1.0: Init
 #Name of the shortcut
 $shortcutName = "Intranet Shortcut" 
 
-Remove-Item -Path "$Env:Public\Desktop\$shortcutName"
+Remove-Item -Path "$Env:Public\Desktop\$shortcutName.lnk"

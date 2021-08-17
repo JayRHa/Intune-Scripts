@@ -34,8 +34,8 @@ function Create-WebShortcut {
 
 #Name of the shortcut
 $shortcutName = "Intranet Shortcut" 
-#Icon file can also be a weblink
-$icon = "C:\temp\website.ico"
+#Icon file best to use a website
+$icon = "https://jannikreinhard.com/files/website.ico"
 #Link of the webseite
 $websiteUrl = "https://jannikreinhard.com/"
 #OutputFolder

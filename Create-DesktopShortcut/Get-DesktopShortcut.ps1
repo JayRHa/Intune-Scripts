@@ -11,6 +11,6 @@ Version 1.0: Init
 #Name of the shortcut
 $shortcutName = "Intranet Shortcut"  
 
-if (Test-Path -Path "$Env:Public\Desktop\$shortcutName"){
+if (Test-Path -Path "$Env:Public\Desktop\$shortcutName.lnk"){
     Write-Output "0"
 }
