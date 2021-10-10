@@ -1,3 +1,3 @@
 ﻿# Intune-Scripts
-Die Blogposts zu meinen Scripten kannst du hier finden: 
+You can find the blogposts to my scripts here: 
 https://jannikreinhard.com/
