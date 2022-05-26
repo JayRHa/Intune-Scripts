@@ -209,7 +209,7 @@ Create-Action -Action_Name ActionNo
 <toast scenario="reminder">
     <visual>
     <binding template="ToastGeneric">
-        <image placement="hero" src="$tostImage"/>
+        <image placement="hero" src="$tostImagePath"/>
 		<image placement="appLogoOverride" hint-crop="circle" src="$toastLogoPath"/>
 		<text>$tostHeadline</text>
         <text>$tostText</text>
