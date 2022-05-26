@@ -57,7 +57,7 @@ Function Create-Action
 		
 		$Main_Reg_Path = "HKCU:\SOFTWARE\Classes\$Action_Name"
 		$Command_Path = "$Main_Reg_Path\shell\open\command"
-		$CMD_Script = "C:\Windows\Temp\$Action_Name.cmd"
+		$CMD_Script = "C:\Users\Public\Documents\$Action_Name.cmd"
 		New-Item $Command_Path -Force
 		New-ItemProperty -Path $Main_Reg_Path -Name "URL Protocol" -Value "" -PropertyType String -Force | Out-Null
 		Set-ItemProperty -Path $Main_Reg_Path -Name "(Default)" -Value "URL:$Action_Name Protocol" -Force | Out-Null
@@ -82,7 +82,7 @@ $toastLogoPath	= "C:\Windows\ImmersiveControlPanel\images\logo.png"
 #################################################################################################################
 
 # Path
-$scripExecutionPath = "C:\Windows\Temp"
+$scripExecutionPath = "C:\Users\Public\Documents"
 $tostImagePath = "$env:TEMP\ToastImage.png"
 
 #################################################################################################################
@@ -141,9 +141,8 @@ $actionScriptPre = @'
 
 	}
 
-	$Current_User_Profile = Get-ChildItem Registry::\HKEY_USERS | Where-Object { Test-Path "$($_.pspath)\Volatile Environment" } | ForEach-Object { (Get-ItemProperty "$($_.pspath)\Volatile Environment").USERPROFILE }
 	$Properties = [Ordered] @{
-		"UserName"      = $Current_User_Profile.split("\")[2]	
+		"UserName"      = $env:UserName
 		"Computername"  = $env:computername
 		"SurveyAnswer"  = "
 '@
@@ -160,25 +159,25 @@ $actionScriptPost = @'
 		f_logType    = $logType 
 	}
 	$logResponse = Post-LogAnalyticsData @params
-	Remove-Item C:\Windows\Temp\ActionYes.ps1 -Force 
-	Remove-Item C:\Windows\Temp\ActionPartly.ps1 -Force 
-	Remove-Item C:\Windows\Temp\ActionNo.ps1 -Force
-	Remove-Item C:\Windows\Temp\ActionYes.cmd -Force 
-	Remove-Item C:\Windows\Temp\ActionPartly.cmd -Force 
-	Remove-Item C:\Windows\Temp\ActionNo.cmd -Force
+	Remove-Item C:\Users\Public\Documents\ActionYes.ps1 -Force 
+	Remove-Item C:\Users\Public\Documents\ActionPartly.ps1 -Force 
+	Remove-Item C:\Users\Public\Documents\ActionNo.ps1 -Force
+	Remove-Item C:\Users\Public\Documents\ActionYes.cmd -Force 
+	Remove-Item C:\Users\Public\Documents\ActionPartly.cmd -Force 
+	Remove-Item C:\Users\Public\Documents\ActionNo.cmd -Force
 '@
 
 # Call the PS1 with an CMD script
 $actionScriptCmdYes = @'
-Powershell.exe -executionpolicy Bypass -File C:\Windows\Temp\ActionYes.ps1
+Powershell.exe -executionpolicy Bypass -File C:\Users\Public\Documents\ActionYes.ps1
 '@
 
 $actionScriptCmdPartly = @'
-Powershell.exe -executionpolicy Bypass -File C:\Windows\Temp\ActionPartly.ps1
+Powershell.exe -executionpolicy Bypass -File C:\Users\Public\Documents\ActionPartly.ps1
 '@
 
 $actionScriptCmdNo = @'
-Powershell.exe -executionpolicy Bypass -File C:\Windows\Temp\ActionNo.ps1
+Powershell.exe -executionpolicy Bypass -File C:\Users\Public\Documents\ActionNo.ps1
 '@
 
 #################################################################################################################
