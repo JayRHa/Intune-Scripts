@@ -85,7 +85,7 @@ $menuTroubleshoot_collectLogs.add_Click({
 # Create submenu for Ime restart
 $menuTroubleshoot_restartIme = $menuTroubleshoot.MenuItems.Add("IME Restart")
 $menuTroubleshoot_restartIme.add_Click({
-    Restart-Service -Name "IntuneManagementExtension"
+    Restart-Service -DisplayName "Microsoft Intune Management Extension"
 })
 # Create submenu for User Certificate
 $menuTroubleshoot_usrCert = $menuTroubleshoot.MenuItems.Add("User Certificate")
