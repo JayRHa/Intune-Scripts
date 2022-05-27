@@ -15,8 +15,6 @@ while("Critical", "Error", "Warning", "Information", "Verbose" -notcontains $log
 }
 
 $imeConfFile = "C:\Program Files (x86)\Microsoft Intune Management Extension\Microsoft.Management.Services.IntuneWindowsAgent.exe.config"
-#$configFile = Get-Content -Path $imeConfFile
-
 
 $configFile = New-Object System.XML.XMLDocument
 $configFile.Load($imeConfFile)
@@ -26,3 +24,5 @@ $logLevel.switchValue = "$logLevelSelection"
 $configFile.Save($imeConfFile)
 
 Restart-Service -DisplayName "Microsoft Intune Management Extension"
+
+Write-Host "IME Log level changed to $logLevelSelection"
