@@ -71,11 +71,20 @@ function Import-ConfigurationProfile {
 }
 
 
-# Get name of the policy
-$confProfileName = Read-Host "Enter a name for the configuration profile"
+#Auth
+if(-not $global:authToken){
+    if($User -eq $null -or $User -eq ""){
+    $User = Read-Host -Prompt "Please specify your user principal name for Azure Authentication"
+    Write-Host
+    }
+    $global:authToken = Get-AuthToken -User $User
+}
 
 # Get certificate
 $certificatePath = Get-Certificate
+
+# Get name of the policy
+$confProfileName = Read-Host "Enter a name for the configuration profile"
 
 # Get needed informations
 $certThumbprint = ([System.Security.Cryptography.X509Certificates.X509Certificate2]::new($certificatePath)).thumbprint
@@ -99,14 +108,5 @@ $customConfigProfile = @"
     ]
 }
 "@
-
-#Auth
-if(-not $global:authToken){
-    if($User -eq $null -or $User -eq ""){
-    $User = Read-Host -Prompt "Please specify your user principal name for Azure Authentication"
-    Write-Host
-    }
-    $global:authToken = Get-AuthToken -User $User
-}
 
 Import-ConfigurationProfile  -ConfigProfile $customConfigProfile
