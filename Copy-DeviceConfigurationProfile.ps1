@@ -81,9 +81,9 @@ function Import-ConfigurationProfile {
 }
 
 
-## Start ##
-#Auth
-if(-not $global:authToken){
+##################################################
+#Get auth toke
+if(-not $global:authToken.Authorization){
     if($User -eq $null -or $User -eq ""){
     $User = Read-Host -Prompt "Please specify your user principal name for Azure Authentication"
     Write-Host
@@ -91,11 +91,17 @@ if(-not $global:authToken){
     $global:authToken = Get-AuthToken -User $User
 }
 
-
+# Write all existing confi profiles
 $profiles = Get-ListOfProfiles
- 
+Write-Host "++++++++++++++++++++++++++++++"
+Write-Host "+++++++Config Profiles++++++++"
+Write-Host "++++++++++++++++++++++++++++++"
+$profiles.ForEach({Write-Host " - " $_.name})
+Write-Host "++++++++++++++++++++++++++++++"
+
+
 $profileName = Read-Host "Enter the name of the profile you want to copy"
-$profileToBeCopied = $profiles | where {$_.name -eq "$profileName"}
+$profileToBeCopied = ($profiles | where {$_.name -eq "$profileName"})[0]
 
 if($profileToBeCopied -eq $null) {
    Write-Host "Profile not found" -ForegroundColor Yellow
