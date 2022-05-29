@@ -74,9 +74,10 @@ function Import-ConfigurationProfile {
              [Parameter(Mandatory)]
              $ConfigProfile
        )
+    
     $profile = $ConfigProfile | Select-Object -Property * -ExcludeProperty id,createdDateTime,lastModifiedDateTime,version,supportsScopeTags
     $profile = $ConfigProfile | ConvertTo-Json
-    Write-Host 
+    Write-Host $profile
     Invoke-RestMethod -Uri https://graph.microsoft.com/v1.0/deviceManagement/deviceConfigurations -Headers $authToken -Method Post -Body $profile -ContentType "application/json" 
 }
 
