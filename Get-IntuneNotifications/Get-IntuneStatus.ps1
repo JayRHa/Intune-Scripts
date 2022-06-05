@@ -83,20 +83,20 @@ $result = @"
 
 +++++++++++++++++++++++++++ Device Count +++++++++++++++++++++++++++
 "@ + "`r`n" + 
-"Total Devices: " + $managedDevices.enrolledDeviceCount + "`r`n" +  
+"Total Devices: " + $managedDevices.enrolledDeviceCount + "`r`n" +   
 "Mdm only Devices: " + $managedDevices.mdmEnrolledCount + "`r`n" +  
 "Co-Managed Devices: " + $managedDevices.dualEnrolledDeviceCount + "`r`n" +  
 "`r`n" + 
 "+++++++++++++++++++++++++ Operating Systems +++++++++++++++++++++++++" + "`r`n" +  
 "Windows: " + $managedDevices.deviceOperatingSystemSummary.windowsCount + "`r`n" +
 "Android: " + $managedDevices.deviceOperatingSystemSummary.androidCount + "`r`n" +  
-"IOS " + $managedDevices.deviceOperatingSystemSummary.iosCount + "`r`n" +  
+"IOS: " + $managedDevices.deviceOperatingSystemSummary.iosCount + "`r`n" +  
 "MacOS: " + $managedDevices.deviceOperatingSystemSummary.macOSCount + "`r`n" +  
 "Windows Mobile: " + $managedDevices.deviceOperatingSystemSummary.windowsMobileCount + "`r`n" +
 "`r`n" + 
 "+++++++++++++++++++++++++ Compliance State +++++++++++++++++++++++++" + "`r`n" + 
 "Compliant Device: " + $complianceState.compliantDeviceCount + "`r`n" +  
-"Non Compliant Device:" + $complianceState.nonCompliantDeviceCount + "`r`n" +  
+"Not Compliant Device: " + $complianceState.nonCompliantDeviceCount + "`r`n" +  
 "In Grace Period: " + $complianceState.inGracePeriodCount + "`r`n" +  
 "Not Applicable: " + $complianceState.notApplicableDeviceCount + "`r`n" +  
 "Devices with error: " + $complianceState.errorDeviceCount + "`r`n" +  
