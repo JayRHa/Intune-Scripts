@@ -33,15 +33,19 @@ Release notes:
 Version 1.0: Init
 Inspiration: https://stackoverflow.com/questions/62892229/spawn-powershell-admin-consoles-from-windows-tray
 #> 
-[System.GC]::Collect()
+#################################################
+################### Variables ###################
+#################################################
+$cmtraceSourceLink = "https://github.com/JayRHa/Intune-Scripts/blob/main/Create-IntuneSystemtray/CMTrace.exe"
+#################################################
 
+
+[System.GC]::Collect()
 $path = (Split-Path -Parent $($global:MyInvocation.MyCommand.Definition))
 
 # Load Assemblies
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
-#Add-Type -AssemblyName WindowsFormsIntegration
-#Add-Type -AssemblyName presentationframework
 
 
 # Create Primary form
@@ -49,6 +53,7 @@ $objForm = New-Object System.Windows.Forms.Form
 $objForm.Visible = $false
 $objForm.WindowState = "minimized"
 $objForm.ShowInTaskbar = $false
+
 $objForm.add_Closing({ $objForm.ShowInTaskBar = $False })
 
 # Add Icon
@@ -96,6 +101,17 @@ $objContextMenu.MenuItems.Add($buttonOpenCompanyPortal) | Out-Null
 $objContextMenu.MenuItems.AddRange($menuTroubleshoot) | Out-Null
 $objContextMenu.MenuItems.Add($buttonExit) | Out-Null
 
+# Create submenu for CmTrace installation
+$cmtracePath = "C:\Windows\Temp\CMTrace.exe"
+if(-NOT (Test-Path -Path $cmtracePath)){
+    $menuTroubleshoot_installCmtrcace = $menuTroubleshoot.MenuItems.Add("Install CMTrace")
+    $menuTroubleshoot_installCmtrcace.add_Click({
+        Invoke-WebRequest -Uri $cmtraceSourceLink -OutFile $cmtracePath
+        $menuTroubleshoot_installCmtrcace.visible = $false
+        $objForm.Refresh()
+    })
+}
+
 # Create submenu for Ime restart
 $menuTroubleshoot_imeLogs = $menuTroubleshoot.MenuItems.Add("Show IME Logs")
 $menuTroubleshoot_imeLogs.add_Click({
@@ -110,7 +126,7 @@ $menuTroubleshoot_collectLogs.add_Click({
 # Create submenu for Ime restart
 $menuTroubleshoot_restartIme = $menuTroubleshoot.MenuItems.Add("IME Restart")
 $menuTroubleshoot_restartIme.add_Click({
-    Restart-Service -Name "IntuneManagementExtension"
+    Restart-Service -DisplayName "Microsoft Intune Management Extension"
 })
 # Create submenu for User Certificate
 $menuTroubleshoot_usrCert = $menuTroubleshoot.MenuItems.Add("User Certificate")
