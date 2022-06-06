@@ -11,7 +11,7 @@ Inspiration: https://stackoverflow.com/questions/62892229/spawn-powershell-admin
 #################################################
 ################### Variables ###################
 #################################################
-$cmtraceSourceLink = "https://github.com/JayRHa/Intune-Scripts/blob/main/Create-IntuneSystemtray/CMTrace.exe"
+$cmtraceSourceLink = "https://github.com/JayRHa/Intune-Scripts/raw/cdc787103c094da7b322e218036adc0934f30159/Create-IntuneSystemtray/CMTrace.exe"
 #################################################
 
 
