@@ -8,15 +8,19 @@ Release notes:
 Version 1.0: Init
 Inspiration: https://stackoverflow.com/questions/62892229/spawn-powershell-admin-consoles-from-windows-tray
 #> 
-[System.GC]::Collect()
+#################################################
+################### Variables ###################
+#################################################
+$cmtraceSourceLink = "https://github.com/JayRHa/Intune-Scripts/blob/main/Create-IntuneSystemtray/CMTrace.exe"
+#################################################
 
+
+[System.GC]::Collect()
 $path = (Split-Path -Parent $($global:MyInvocation.MyCommand.Definition))
 
 # Load Assemblies
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
-#Add-Type -AssemblyName WindowsFormsIntegration
-#Add-Type -AssemblyName presentationframework
 
 
 # Create Primary form
@@ -24,6 +28,7 @@ $objForm = New-Object System.Windows.Forms.Form
 $objForm.Visible = $false
 $objForm.WindowState = "minimized"
 $objForm.ShowInTaskbar = $false
+
 $objForm.add_Closing({ $objForm.ShowInTaskBar = $False })
 
 # Add Icon
@@ -70,6 +75,17 @@ $objContextMenu.MenuItems.Add($buttonSync) | Out-Null
 $objContextMenu.MenuItems.Add($buttonOpenCompanyPortal) | Out-Null
 $objContextMenu.MenuItems.AddRange($menuTroubleshoot) | Out-Null
 $objContextMenu.MenuItems.Add($buttonExit) | Out-Null
+
+# Create submenu for CmTrace installation
+$cmtracePath = "C:\Windows\Temp\CMTrace.exe"
+if(-NOT (Test-Path -Path $cmtracePath)){
+    $menuTroubleshoot_installCmtrcace = $menuTroubleshoot.MenuItems.Add("Install CMTrace")
+    $menuTroubleshoot_installCmtrcace.add_Click({
+        Invoke-WebRequest -Uri $cmtraceSourceLink -OutFile $cmtracePath
+        $menuTroubleshoot_installCmtrcace.visible = $false
+        $objForm.Refresh()
+    })
+}
 
 # Create submenu for Ime restart
 $menuTroubleshoot_imeLogs = $menuTroubleshoot.MenuItems.Add("Show IME Logs")
