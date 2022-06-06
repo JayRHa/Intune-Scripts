@@ -8,6 +8,12 @@ Release notes:
 Version 1.0: Init
 #> 
 
+If (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
+{
+	Write-Warning "Please execute the script with admin rights"
+    exit
+}
+
 $logLevelSelection = Read-Host "Enter the log level [Critical, Error, Warning, Information, Verbose]"
 while("Critical", "Error", "Warning", "Information", "Verbose" -notcontains $logLevelSelection )
 {
@@ -22,7 +28,17 @@ $configFile.Load($imeConfFile)
 $logLevel = $configFile.configuration.'system.diagnostics'.sources.source
 $logLevel.switchValue = "$logLevelSelection"
 $configFile.Save($imeConfFile)
+Write-Warning "IME Log level changed to $logLevelSelection"
 
 Restart-Service -DisplayName "Microsoft Intune Management Extension"
+Write-Warning "IME Service was restarted"
 
-Write-Host "IME Log level changed to $logLevelSelection"
+
+$openLogs = Read-Host "Open Log file folder [Y/N]"
+while("Y", "N", "Yes", "No", "y", "n" -notcontains $openLogs )
+{
+    $openLogs = Read-Host "Open Log file folder [Y/N]"
+}
+If("Y", "Yes", "y" -contains $openLogs){
+    explorer c:\ProgramData\Microsoft\IntuneManagementExtension\Logs
+}
