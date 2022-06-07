@@ -85,6 +85,7 @@ if(-NOT (Test-Path -Path $cmtracePath)){
         Invoke-WebRequest -Uri $cmtraceSourceLink -OutFile $cmtracePath
         $menuTroubleshoot_installCmtrcace.visible = $false
         $objForm.Refresh()
+        Start-Process -FilePath $cmtracePath
     })
 }
 
