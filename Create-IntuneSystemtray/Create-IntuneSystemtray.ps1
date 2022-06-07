@@ -14,13 +14,13 @@ Inspiration: https://stackoverflow.com/questions/62892229/spawn-powershell-admin
 $cmtraceSourceLink = "https://github.com/JayRHa/Intune-Scripts/raw/cdc787103c094da7b322e218036adc0934f30159/Create-IntuneSystemtray/CMTrace.exe"
 #################################################
 
-
 [System.GC]::Collect()
 $path = (Split-Path -Parent $($global:MyInvocation.MyCommand.Definition))
 
 # Load Assemblies
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+
 
 
 # Create Primary form
@@ -53,7 +53,8 @@ $buttonSync = New-Object System.Windows.Forms.MenuItem
 $buttonSync.Index = 2
 $buttonSync.Text = "Sync"
 $buttonSync.add_Click({
-    Get-ScheduledTask | ? {$_.TaskName -eq 'PushLaunch'} | Start-ScheduledTask
+    $syncIme = New-Object -ComObject Shell.Application
+    $syncIme.open("intunemanagementextension://syncapp")
 })
 
 # Menu Troubleshoot
