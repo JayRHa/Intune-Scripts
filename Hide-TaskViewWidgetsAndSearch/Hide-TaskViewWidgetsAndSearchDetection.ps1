@@ -1,9 +1,9 @@
 <#
 Version: 1.0
 Author: Jannik Reinhard (jannikreinhard.com)
-Script: Hide-TaskViewAndWidgetsDetection
+Script: Hide-TaskViewWidgetsAndSearchDetection
 Description:
-Hite the Task View and Widgets icons in the task bar
+Hite the Task View Widgets and search icons in the task bar
 Release notes:
 Version 1.0: Init
 #> 
