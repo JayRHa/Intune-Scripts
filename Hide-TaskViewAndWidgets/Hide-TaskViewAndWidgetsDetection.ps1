@@ -25,20 +25,29 @@ function Test-RegistryValue {
     }
 }
 
-$regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+$regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion"
 $showTaskViewButton = "ShowTaskViewButton"
 $showWidgets = "TaskbarDa"
+$showSearch = "SearchboxTaskbarMode"
 
-If(Test-RegistryValue -Path $regPath -Value $showTaskViewButton){
-    if((Get-ItemProperty -Path $regPath | Select-Object -ExpandProperty $showTaskViewButton) -ne 0){
+
+If(Test-RegistryValue -Path "$regPath\Explorer\Advanced" -Value $showTaskViewButton){
+    if((Get-ItemProperty -Path "$regPath\Explorer\Advanced" | Select-Object -ExpandProperty $showTaskViewButton) -ne 0){
         Write-Host "Show Task View Button is active"
         exit 1
     }
 }
 
-If(Test-RegistryValue -Path $regPath -Value $showTaskViewButton){
-    if((Get-ItemProperty -Path $regPath | Select-Object -ExpandProperty $showWidgets) -ne 0){
+If(Test-RegistryValue -Path "$regPath\Explorer\Advanced" -Value $showWidgets){
+    if((Get-ItemProperty -Path "$regPath\Explorer\Advanced" | Select-Object -ExpandProperty $showWidgets) -ne 0){
         Write-Host "Show Widgets is active"
+        exit 1
+    }
+}
+
+If(Test-RegistryValue -Path "$regPath\Search" -Value $showSearch){
+    if((Get-ItemProperty -Path "$regPath\Search" | Select-Object -ExpandProperty $showSearch) -ne 0){
+        Write-Host "Show Search Button is active"
         exit 1
     }
 }
