@@ -21,11 +21,11 @@ $sharedKey = "" # Add Primary key
 $logType = "Speedtest"
 ################################################################################################################
 
-Function Measure-NetworkSpeed($testFile, $fileSize){
+Function Measure-NetworkSpeed($f_testFile, $f_fileSize){
     $tempFile  = Join-Path -Path $env:TEMP -ChildPath 'testfile.tmp'
     $webClient = New-Object Net.WebClient
-    $time = Measure-Command { $webClient.DownloadFile($testFile,$tempFile) } | Select-Object -ExpandProperty TotalSeconds
-    $speedMbps = ($fileSize / $time) * 8
+    $time = Measure-Command { $webClient.DownloadFile($f_testFile,$tempFile) } | Select-Object -ExpandProperty TotalSeconds
+    $speedMbps = ($f_fileSize / $time) * 8
     return $speedMbps   
 }
 
@@ -79,8 +79,9 @@ Function Post-LogAnalyticsData($f_customerId, $f_sharedKey, $f_body, $f_logType)
 
 # Get network speed
 $time = 0
+
 for ($i=0; $i -lt $testCount; $i++){
-    $time = $time + (Measure-NetworkSpeed($testFile, $fileSize))
+    $time = $time + (Measure-NetworkSpeed -f_testFile $testFile -f_fileSize $fileSize)
 }
 Write-Host ("{0:N2} Mbit/sec" -f ($time/$testCount))
 
