@@ -6,6 +6,7 @@ Description:
 Create a system tray icon with some company portal functions
 Release notes:
 Version 1.0: Init
+Version 1.1: Bug fixes
 Inspiration: https://stackoverflow.com/questions/62892229/spawn-powershell-admin-consoles-from-windows-tray
 #> 
 
@@ -36,9 +37,8 @@ Inspiration: https://stackoverflow.com/questions/62892229/spawn-powershell-admin
 #################################################
 ################### Variables ###################
 #################################################
-$cmtraceSourceLink = "https://github.com/JayRHa/Intune-Scripts/blob/main/Create-IntuneSystemtray/CMTrace.exe"
+$cmtraceSourceLink = "https://github.com/JayRHa/Intune-Scripts/raw/cdc787103c094da7b322e218036adc0934f30159/Create-IntuneSystemtray/CMTrace.exe"
 #################################################
-
 
 [System.GC]::Collect()
 $path = (Split-Path -Parent $($global:MyInvocation.MyCommand.Definition))
@@ -46,6 +46,7 @@ $path = (Split-Path -Parent $($global:MyInvocation.MyCommand.Definition))
 # Load Assemblies
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+
 
 
 # Create Primary form
@@ -78,7 +79,8 @@ $buttonSync = New-Object System.Windows.Forms.MenuItem
 $buttonSync.Index = 2
 $buttonSync.Text = "Sync"
 $buttonSync.add_Click({
-    Get-ScheduledTask | ? {$_.TaskName -eq 'PushLaunch'} | Start-ScheduledTask
+    $syncIme = New-Object -ComObject Shell.Application
+    $syncIme.open("intunemanagementextension://syncapp")
 })
 
 # Menu Troubleshoot
@@ -109,6 +111,7 @@ if(-NOT (Test-Path -Path $cmtracePath)){
         Invoke-WebRequest -Uri $cmtraceSourceLink -OutFile $cmtracePath
         $menuTroubleshoot_installCmtrcace.visible = $false
         $objForm.Refresh()
+        Start-Process -FilePath $cmtracePath
     })
 }
 
@@ -159,8 +162,8 @@ $objForm.Dispose()
 New-Item -Path "$scriptPath/Create-IntuneSystemtray.ps1" -type "file" -Value $script -force
 
 $trigger    = New-ScheduledTaskTrigger -AtLogOn
-$user       = New-ScheduledTaskPrincipal -UserID "$env:username" -LogonType Interactive -RunLevel Highest
+#$user       = New-ScheduledTaskPrincipal -UserID "$env:username" -LogonType Interactive
 $action     = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-WindowStyle hidden $scriptPath/Create-IntuneSystemtray.ps1"
-$task       = New-ScheduledTask -Action $action -Trigger $trigger -Principal $user
+$task       = New-ScheduledTask -Action $action -Trigger $trigger #-Principal $user
 Register-ScheduledTask -TaskName "StartIntuneSystemtray" -InputObject $task
 Get-ScheduledTask | ? {$_.TaskName -eq 'StartIntuneSystemtray'} | Start-ScheduledTask
