@@ -84,10 +84,12 @@ for ($i=0; $i -lt $testCount; $i++){
     $time = $time + (Measure-NetworkSpeed -f_testFile $testFile -f_fileSize $fileSize)
 }
 Write-Host ("{0:N2} Mbit/sec" -f ($time/$testCount))
+$ipv4 = (Get-NetIPAddress | Where-Object {$_.AddressState -eq "Preferred" -and $_.ValidLifetime -lt "24:00:00"}).IPAddress
 
 # Send to log analytics
 $Properties = [Ordered] @{
     "PublicIp"      = Get-PublicIp
+    "LocalIps"      = $ipv4
     "Speed"         = ($time/$testCount)
     "ComputerName"  = $env:computername
 }
