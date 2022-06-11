@@ -102,3 +102,4 @@ $params = @{
     f_logType    = $logType 
 }
 $logResponse = Post-LogAnalyticsData @params
+exit 0
