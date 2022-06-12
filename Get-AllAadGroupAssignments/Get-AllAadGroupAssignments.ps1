@@ -183,13 +183,13 @@ if(-not $hasAssignment) {Write-Host "No Assignment" -ForegroundColor green}
 Write-Host "------------------------------"
 
 # Administrative templates
-Write-Host "Administrative templates" -ForegroundColor Yellow
+Write-Host "Administrative Templates" -ForegroundColor Yellow
 Write-Host "------------------------------"
 $hasAssignment = Get-GroupAssignments -groupId $groupId -uri "deviceManagement" -type "groupPolicyConfigurations" -uriAssignment "assignments"
 if(-not $hasAssignment) {Write-Host "No Assignment" -ForegroundColor green}
 Write-Host "------------------------------"
 
-# Device Configuration
+# Device Compliance Policies
 Write-Host "Device Compliance Policies" -ForegroundColor Yellow
 Write-Host "------------------------------"
 $hasAssignment = Get-GroupAssignments -groupId $groupId -uri "deviceManagement" -type "deviceCompliancePolicies" -uriAssignment "assignments"
