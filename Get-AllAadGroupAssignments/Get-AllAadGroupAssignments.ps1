@@ -149,6 +149,7 @@ function Get-GroupAssignments{
 #########################################################################################################
 ############################################ Start ######################################################
 #########################################################################################################
+$countListGroups = 20
 
 #Auth
 if(-not $global:authToken){
@@ -169,10 +170,17 @@ if(-not $checkGroupName){
     Write-Warning "Group $aadGroupName not found"
     Write-Host "------------------------------"
     Write-Host "Available Groups:" -ForegroundColor Yellow
-    Write-Host " - All users"
-    Write-Host " - All devices"
+    Write-Host " -  All users"
+    Write-Host " -  All devices"
+
+    $i = 0
     foreach ($group in $groups) {
         Write-Host " - " $group.displayName
+        $i++
+        if($i -gt $countListGroups){
+            Write-Warning "Open the Azure Ad Portal to see all group: https://portal.azure.com/#view/Microsoft_AAD_IAM/GroupsManagementMenuBlade/~/AllGroups"
+            break
+        }
     }
     Write-Host "------------------------------"
     while(-not $checkGroupName)
