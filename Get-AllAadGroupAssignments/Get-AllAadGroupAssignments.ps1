@@ -66,6 +66,8 @@ function Check-GroupName{
         $allGroups
     )
 
+    if($groupName -eq "All users"){return $true}
+    if($groupName -eq "All devices"){return $true}
     foreach ($group in $allGroups) {
         if($group.displayName -eq $aadGroupName) {
             return $true
@@ -81,6 +83,8 @@ function Get-GroupId{
         [Parameter(Mandatory)]
         $allGroups
     )
+    if($groupName -eq "All users"){return "acacacac-9df4-4c7d-9d50-4ef0226f57a9"}
+    if($groupName -eq "All devices"){return "adadadad-808e-44e2-905a-0b7873a8a531"}
 
     foreach ($group in $groups) {
         if($group.displayName -eq $aadGroupName) {
@@ -118,6 +122,12 @@ function Get-GroupAssignments{
                 Write-Host "+" $configuration.displayName
                 $hasAssignment = $true
             }elseif($uriAssignment -eq "assignments" -and $assignment.groupId -eq $groupId -and $assignment.'@odata.type' -eq '#microsoft.graph.groupAssignmentTarget'){
+                Write-Host "+" $configuration.displayName
+                $hasAssignment = $true
+            }elseif($uriAssignment -eq "assignments" -and $groupId -eq "acacacac-9df4-4c7d-9d50-4ef0226f57a9" -and $assignment.'@odata.type' -eq '#microsoft.graph.allLicensedUsersAssignmentTarget'){
+                Write-Host "+" $configuration.displayName
+                $hasAssignment = $true
+            }elseif($uriAssignment -eq "assignments" -and $groupId -eq "adadadad-808e-44e2-905a-0b7873a8a531" -and $assignment.'@odata.type' -eq '#microsoft.graph.allDevicesAssignmentTarget'){
                 Write-Host "+" $configuration.displayName
                 $hasAssignment = $true
             }
@@ -159,6 +169,8 @@ if(-not $checkGroupName){
     Write-Warning "Group $aadGroupName not found"
     Write-Host "------------------------------"
     Write-Host "Available Groups:" -ForegroundColor Yellow
+    Write-Host " - All users"
+    Write-Host " - All devices"
     foreach ($group in $groups) {
         Write-Host " - " $group.displayName
     }
