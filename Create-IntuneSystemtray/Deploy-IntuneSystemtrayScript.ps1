@@ -162,8 +162,8 @@ $objForm.Dispose()
 New-Item -Path "$scriptPath/Create-IntuneSystemtray.ps1" -type "file" -Value $script -force
 
 $trigger    = New-ScheduledTaskTrigger -AtLogOn
-#$user       = New-ScheduledTaskPrincipal -UserID "$env:username" -LogonType Interactive
+$user       = New-ScheduledTaskPrincipal -GroupId S-1-5-32-545
 $action     = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-WindowStyle hidden $scriptPath/Create-IntuneSystemtray.ps1"
-$task       = New-ScheduledTask -Action $action -Trigger $trigger #-Principal $user
+$task       = New-ScheduledTask -Action $action -Trigger $trigger -Principal $user
 Register-ScheduledTask -TaskName "StartIntuneSystemtray" -InputObject $task
 Get-ScheduledTask | ? {$_.TaskName -eq 'StartIntuneSystemtray'} | Start-ScheduledTask
