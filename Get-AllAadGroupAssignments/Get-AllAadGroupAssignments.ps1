@@ -177,7 +177,7 @@ if(-not $checkGroupName){
     foreach ($group in $groups) {
         Write-Host " - " $group.displayName
         $i++
-        if($i -gt $countListGroups){
+        if($i -gt $countListGroups -or $i -gt 99){
             Write-Warning "Open the Azure Ad Portal to see all group: https://portal.azure.com/#view/Microsoft_AAD_IAM/GroupsManagementMenuBlade/~/AllGroups"
             break
         }
