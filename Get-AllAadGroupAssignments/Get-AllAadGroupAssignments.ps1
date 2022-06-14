@@ -64,9 +64,9 @@ function Get-GraphCall {
 function Get-AllAadGroup{
     $return = Get-GraphCall -apiUri "groups" -method "GET"
     $groups = $return.value
-    while($return.'odata.nextLink')
+    while($return.'@odata.nextLink')
     {
-        $return = Get-GraphCall -apiUri "groups" -method "GET"
+        $return = Invoke-RestMethod -Uri $return.'@odata.nextLink' -Headers $authToken -Method "GET"
         $groups += $return.value
     }
     
