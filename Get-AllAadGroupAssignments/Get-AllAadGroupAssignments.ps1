@@ -26,8 +26,10 @@ function Get-AuthToken {
     $adal = Join-Path $AadModule.ModuleBase "Microsoft.IdentityModel.Clients.ActiveDirectory.dll"
     $adalforms = Join-Path $AadModule.ModuleBase "Microsoft.IdentityModel.Clients.ActiveDirectory.Platform.dll"
 
-    [System.Reflection.Assembly]::LoadFrom($adal) | Out-Null
-    [System.Reflection.Assembly]::LoadFrom($adalforms) | Out-Null
+    Add-Type -Path $adal
+    Add-Type -Path $adalforms
+    # [System.Reflection.Assembly]::LoadFrom($adal) | Out-Null
+    # [System.Reflection.Assembly]::LoadFrom($adalforms) | Out-Null
     $clientId = "d1ddf0e4-d672-4dae-b554-9d5bdfd93547"
     $redirectUri = "urn:ietf:wg:oauth:2.0:oob"
     $resourceAppIdURI = "https://graph.microsoft.com"
