@@ -6,6 +6,7 @@ Description:
 Get all intune assignments from an aad group
 Release notes:
 Version 1.0: Init
+Version 1.2: Configure count of group output and fix bug with enviroments with more then 100 groups
 #> 
 function Get-AuthToken {
     [cmdletbinding()]
@@ -60,6 +61,18 @@ function Get-GraphCall {
     return Invoke-RestMethod -Uri https://graph.microsoft.com/beta/$apiUri -Headers $authToken -Method $method
 }
 
+function Get-AllAadGroup{
+    $return = Get-GraphCall -apiUri "groups" -method "GET"
+    $groups = $return.value
+    while($return.'odata.nextLink')
+    {
+        $return = Get-GraphCall -apiUri "groups" -method "GET"
+        $groups += $return.value
+    }
+    
+    return $groups
+}
+
 function Check-GroupName{
     param(
         [Parameter(Mandatory)]
@@ -70,6 +83,7 @@ function Check-GroupName{
 
     if($groupName -eq "All users"){return $true}
     if($groupName -eq "All devices"){return $true}
+
     foreach ($group in $allGroups) {
         if($group.displayName -eq $aadGroupName) {
             return $true
@@ -164,7 +178,7 @@ if(-not $global:authToken){
 
 # Get an check aad group
 $aadGroupName = Read-Host "Enter the name of the AAD Group"
-$groups = (Get-GraphCall -apiUri "groups" -method "GET").value
+$groups = Get-AllAadGroup
 $checkGroupName = Check-GroupName -groupName $aadGroupName -allGroups $groups
 
 
@@ -179,7 +193,7 @@ if(-not $checkGroupName){
     foreach ($group in $groups) {
         Write-Host " - " $group.displayName
         $i++
-        if($i -gt $countListGroups -or $i -gt 99){
+        if($i -gt $countListGroups -or $i -gt 100){
             Write-Warning "Open the Azure Ad Portal to see all group: https://portal.azure.com/#view/Microsoft_AAD_IAM/GroupsManagementMenuBlade/~/AllGroups"
             break
         }
