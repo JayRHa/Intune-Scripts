@@ -82,7 +82,7 @@ if(-not $global:authToken){
 
 # Get certificate
 $certificatePath = Get-Certificate
-((Get-Content $certificatePath -Raw).Replace("`r","").Replace("`n","")) | Set-Content $certificatePath -Force
+((Get-Content $certificatePath -Raw).Replace("`r","").Replace("`n","")) | Set-Content $certificatePath -NoNewline -Force
 
 # Get name of the policy
 $confProfileName = Read-Host "Enter a name for the configuration profile"
