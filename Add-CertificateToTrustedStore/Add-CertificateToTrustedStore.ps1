@@ -6,6 +6,7 @@ Description:
 Create config profile to import certificate to the truste cer store
 Release notes:
 Version 1.0: Init
+Version 1.1: Fix bug with lf and cr
 #>
 
 function Get-Certificate {
