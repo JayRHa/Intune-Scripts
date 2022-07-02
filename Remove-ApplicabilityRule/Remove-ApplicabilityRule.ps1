@@ -63,14 +63,14 @@ Get-MgDeviceManagementDeviceConfiguration | ForEach-Object {
     if(-not ($_.DeviceManagementApplicabilityRuleOSEdition.RuleType -eq $null)){
       $bodyJson = '{ "deviceManagementApplicabilityRuleOsEdition": null}' | ConvertFrom-Json
       $bodyJson | Add-Member -NotePropertyName "@odata.type" -NotePropertyValue $_.AdditionalProperties.'@odata.type'
-      write-host ($bodyJson  | ConvertTo-Json)
+      Write-host "Applicability rule deleted form: $($_.displayname) ($($_.id))"
       Invoke-MgGraphRequest -Method PATCH -Uri ("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations/$($_.id)") -Body ($bodyJson  | ConvertTo-Json)
 
     }
     if(-not ($_.DeviceManagementApplicabilityRuleOSVersion.RuleType -eq $null)){
       $bodyJson = '{"deviceManagementApplicabilityRuleOsVersion" : null }' | ConvertFrom-Json
       $bodyJson | Add-Member -NotePropertyName "@odata.type" -NotePropertyValue $_.AdditionalProperties.'@odata.type'
-      write-host ($bodyJson  | ConvertTo-Json)
+      Write-host "Applicability rule deleted form: $($_.displayname) ($($_.id))"
       Invoke-MgGraphRequest -Method PATCH -Uri ("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations/$($_.id)") -Body ($bodyJson  | ConvertTo-Json)
     }
 }
