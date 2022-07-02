@@ -12,7 +12,7 @@ function Get-GraphAuthentication{
     $GraphPowershellModulePath = "$global:Path/Microsoft.Graph.psd1"
     if (-not (Get-Module -ListAvailable -Name 'Microsoft.Graph')) {
   
-        if (-Not (lTest-Path $GraphPowershelModulePath)) {
+        if (-Not (Test-Path $GraphPowershelModulePath)) {
             Write-Error "Microsoft.Graph.Intune.psd1 is not installed on the system check: https://docs.microsoft.com/en-us/powershell/microsoftgraph/installation?view=graph-powershell-1.0"
             Return
         }
