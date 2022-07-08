@@ -1,3 +1,4 @@
+
 <#
 Version: 1.0
 Author: Jannik Reinhard (jannikreinhard.com)
@@ -9,25 +10,27 @@ Version 1.0: Init
 #>
 
 Function Get-AuthHeader{
-    $tenantId = 'ad7cb8fd-339e-438e-8db7-0168697e33f2'
-    $clientId = '2aa220cc-f720-4b56-abfe-fecd8031c278'
-    $clientSecret = 'fDM8Q~kgNYRGOV9xeBlDR-7U0tuIIWme5GiG6aYN'
-
-
-    $connectionDetails = @{
-        'tenant'     	= $tenantId
-        'client_id'  	= $clientId
-        'scope'	 	 	= 'https://graph.microsoft.com/.default'
-        'client_secret' = $clientSecret
-        'grant_type'	= 'client_credentials'
+    param (
+        [parameter(Mandatory=$true)]$tenantId,
+        [parameter(Mandatory=$true)]$clientId,
+        [parameter(Mandatory=$true)]$clientSecret
+       )
+    
+    $authBody=@{
+        client_id=$clientId
+        client_secret=$clientSecret
+        scope="https://graph.microsoft.com/.default"
+        grant_type="client_credentials"
     }
 
-    $response = Invoke-WebRequest -Uri "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token" -ContentType "application/x-www-form-urlencoded" -Body $connectionDetails -Method Post
-    
+    $uri="https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token"
+    $accessToken=Invoke-WebRequest -Uri $uri -ContentType "application/x-www-form-urlencoded" -Body $authBody -Method Post -ErrorAction Stop -UseBasicParsing
+    $accessToken=$accessToken.content | ConvertFrom-Json
     $authHeader = @{
         'Content-Type'='application/json'
-        'Authorization'="Bearer " + ($response.content | ConvertFrom-Json).access_token
-        }
+        'Authorization'="Bearer " + $accessToken.access_token
+        'ExpiresOn'=$accessToken.expires_in
+    }
 
     return $authHeader
 
@@ -44,9 +47,17 @@ function Get-GraphCall {
 }
 
 
+
+
 #################################################################################################
 ########################################### Start ###############################################
 #################################################################################################
+$tenantId = Get-AutomationVariable -Name 'TenantId'
+$clientId = Get-AutomationVariable -Name 'AppId'
+$clientSecret = Get-AutomationVariable -Name 'AppSecret'
+
+$global:authToken = Get-AuthHeader -tenantId $tenantId -clientId $clientId -clientSecret $clientSecret
+
 $profileId = ''
 $groupId = ''
 
