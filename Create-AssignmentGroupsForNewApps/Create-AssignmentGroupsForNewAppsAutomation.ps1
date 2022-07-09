@@ -101,14 +101,7 @@ function Add-GroupToApp {
 
     $bodyJson.target.groupId = $groupId
     $bodyJson.intent = $intent
-
-
-
-    Write-Host ($bodyJson | ConvertTo-Json)
-
-      # Check if all deovices or user assigned
     Invoke-RestMethod -Uri ("https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$appId/assignments") -ContentType 'application/json' -Headers $authToken -Method POST -Body ($bodyJson | ConvertTo-Json)
-      #New-IntuneMobileAppAssignment -mobileAppId $appId -intent $intent -target $appObject
 }
 
 #################################################################################################
