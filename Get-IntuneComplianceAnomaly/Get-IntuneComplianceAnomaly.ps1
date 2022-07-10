@@ -65,7 +65,7 @@ function Send-TeamsWebHook{
 ########################################### Start ###############################################
 #################################################################################################
 # To be adapted
-$anomalyEndpoint = "https://intune-anomaly.cognitiveservices.azure.com"
+$anomalyEndpoint = "https://xxxx.cognitiveservices.azure.com"
 $checks = "Not compliant", "Not evaluated"
 
 # Variables
