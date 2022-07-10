@@ -94,7 +94,7 @@ $complianceState = Invoke-RestMethod -Uri ("https://graph.microsoft.com/beta/dev
 $stateCountJson = @'
 { 
     "series": [],
-    "maxAnomalyRatio": 0.40,
+    "": 0.29,
     "sensitivity": 95,
     "granularity": "daily"
 }
