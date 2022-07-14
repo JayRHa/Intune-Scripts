@@ -78,3 +78,7 @@ Add-IntuneFilter -Name "AllWindows8.1" -Platform "Windows10AndLater" -Rule '(dev
 Get-MgDeviceManagementDeviceCategory | ForEach-Object {
     Add-IntuneFilter -Name ("Category"+($($_.DisplayName).Trim())) -Platform "Windows10AndLater" -Rule ('(device.deviceCategory  -eq "'+$($_.DisplayName)+'")' )
 }
+
+# Model
+Add-IntuneFilter -Name "AllCloudPCs" -Platform "Windows10AndLater" -Rule '(device.model -contains "CloudPC") or (device.model -contains "Cloud PC")'
+
