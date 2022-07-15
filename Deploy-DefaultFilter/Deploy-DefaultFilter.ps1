@@ -6,6 +6,8 @@ Description:
 Default set on intune filteer
 Release notes:
 Version 1.0: Init
+Version 1.1: Add Windows365
+Version 1.2: Add description
 #> 
 
 function Get-GraphAuthentication{
