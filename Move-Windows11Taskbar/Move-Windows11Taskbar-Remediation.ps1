@@ -31,7 +31,7 @@ $value = "TaskbarAl"
 
 if(Test-Path $path){
     try{
-        Set-ItemProperty -Path $path -Name $value -Value 0 –Force
+        Set-ItemProperty -Path $path -Name $value -Value 0 -Force
         Exit 0
     }catch{
         Exit 1
