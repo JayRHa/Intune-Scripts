@@ -129,11 +129,16 @@ foreach($check in $checks) {
     $authHeader = @{'Ocp-Apim-Subscription-Key'="$anomalyKey"}
     $result = Invoke-RestMethod -Uri "$anomalyEndpoint/anomalydetector/v1.0/timeseries/last/detect" -ContentType 'application/json' -Headers $authHeader -Method POST -Body  ($stateCountJson | ConvertTo-JSON)
     if($result.isAnomaly -eq $true -and $result.isPositiveAnomaly -eq $true){
+
+        $date = [System.DateTime]::Parse($(($stateCountJson.series[$stateCountJson.series.count -1]).timestamp)).ToString("yyyy.MM.dd")
+        $expectedValue = [math]::Round($($result.expectedValue), 2)
+        $currentValue = [math]::Round($(($stateCountJson.series[$stateCountJson.series.count -1]).value), 2)
+
 	$text  = "`n  
 		Anomaly detected for compliance rule: $check.
-		Expected value: $($result.expectedValue)
-		Current values: $(($stateCountJson.series[$stateCountJson.series.count -1]).value)
-		Date: $(($stateCountJson.series[$stateCountJson.series.count -1]).timestamp)
+		Expected value: $expectedValue
+		Current values: $currentValue
+		Date: $date
 "
 
         Send-TeamsWebHook -textMessage $text -titel "Compliance rule anomaly detected for: $check" -uri $teamWebHookUri
