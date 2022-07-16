@@ -94,7 +94,7 @@ function Get-AppTimeSeries {
         if(-not($_[1] -eq 'Installed' -or $_[1] -eq 'Not applicable')){
             $computerAppState.timestamp = [System.DateTime]::Parse($_[3]).ToString("yyyy.MM.ddT00:00:00") 
             $computerAppState.value = 1
-            $appAppState += $computerAppState
+            $appState += $computerAppState
         }
     }
 
@@ -155,7 +155,7 @@ foreach ($app in $apps) {
 
 	$text  = "`n  
 		Anomaly detected for application: $($app.displayname)
-        ApplicationId: $($app.id)
+            ApplicationId: $($app.id)
 		Expected value: $expectedValue
 		Current values: $currentValue
 		Date: $date
