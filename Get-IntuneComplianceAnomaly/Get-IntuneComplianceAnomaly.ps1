@@ -44,7 +44,7 @@ function Send-TeamsWebHook{
     $JSONBody = [PSCustomObject][Ordered]@{
     "@type" = "MessageCard"
     "@context" = "<http://schema.org/extensions>"
-    "summary" = "Meine erste Alert-Summary!"
+    "summary" = "."
     "themeColor" = '0078D7'
     "title" = "$titel"
     "text" = "$textMessage"
