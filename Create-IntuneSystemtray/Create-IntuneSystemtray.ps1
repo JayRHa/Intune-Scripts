@@ -34,7 +34,7 @@ $objForm.add_Closing({ $objForm.ShowInTaskBar = $False })
 # Add Icon
 $objNotifyIcon = New-Object System.Windows.Forms.NotifyIcon
 $objNotifyIcon.Icon = $path + "\companyPortal.ico"
-$objNotifyIcon.Text = "TrayUtility"
+$objNotifyIcon.Text = "Company Portal"
 $objNotifyIcon.Visible = $true
 
 # Context menue
