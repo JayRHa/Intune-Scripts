@@ -6,6 +6,7 @@ Description:
 Create the Lnk shortcut file
 Release notes:
 Version 1.0: Init
+Version 1.1: Copy icon local
 #> 
 
 
@@ -36,6 +37,7 @@ function Create-WebShortcut {
 $shortcutName = "Intranet Shortcut" 
 #Icon file best to use a website
 $icon = "https://jannikreinhard.com/files/website.ico"
+$iconPath = "C:\ProgramData\WebpageShortcut\webPage.ico"
 #Link of the webseite
 $websiteUrl = "https://jannikreinhard.com/"
 #OutputFolder
@@ -46,6 +48,8 @@ $outputFolder = "C:\temp"
 $path = Join-Path -Path $outputFolder -ChildPath "$shortcutName.lnk"
 
 #Create shortcut
-Create-WebShortcut -Path $path -WebsiteUrl $websiteUrl -Icon $icon
+Invoke-WebRequest -Uri $icon -OutFile "$outputFolder\webPage.ico"
+
+Create-WebShortcut -Path $path -WebsiteUrl $websiteUrl -Icon $iconPath
 
 

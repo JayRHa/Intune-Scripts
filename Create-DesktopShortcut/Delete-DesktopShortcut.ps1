@@ -10,5 +10,7 @@ Version 1.0: Init
 
 #Name of the shortcut
 $shortcutName = "Intranet Shortcut" 
+$iconPath = "C:\ProgramData\WebpageShortcut\"
 
 Remove-Item -Path "$Env:Public\Desktop\$shortcutName.lnk"
+Remove-Item -Path $iconPath
