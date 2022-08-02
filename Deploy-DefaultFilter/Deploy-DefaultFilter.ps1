@@ -1,14 +1,39 @@
-<#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Deploy-DefaultFilter
-Description:
-Default set on intune filteer
-Release notes:
-Version 1.0: Init
-Version 1.1: Add Windows365
-Version 1.2: Add description
+
+<#PSScriptInfo
+.VERSION 1.0
+.GUID 73e3aa75-340f-4f52-99ec-cfbb55a2e2d1
+.AUTHOR Jannik Reinhard
+.COMPANYNAME
+.COPYRIGHT
+.TAGS
+.LICENSEURI
+.PROJECTURI https://github.com/JayRHa/Intune-Scripts/tree/main/Deploy-DefaultFilter
+.ICONURI
+.EXTERNALMODULEDEPENDENCIES 
+.REQUIREDSCRIPTS
+.EXTERNALSCRIPTDEPENDENCIES
+.RELEASENOTES
+.PRIVATEDATA
+
+#>
+
+<# 
+
+.DESCRIPTION 
+ Default set on intune filter 
+.INPUTS
+ None required
+.OUTPUTS
+ None
+.NOTES
+ Author: Jannik Reinhard (jannikreinhard.com)
+ Twitter: @jannik_reinhard
+ Release notes:
+    Version 1.0: Init
+    Version 1.1: Add Windows365
+    Version 1.2: Add description
 #> 
+Param()
 
 function Get-GraphAuthentication{
     try {

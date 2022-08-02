@@ -1,12 +1,38 @@
-<#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Translate-AadGroupUserDevice
-Description:
-Change a user group to a device group based on the device primary contact
-Release notes:
-Version 1.0: Init
+
+<#PSScriptInfo
+.VERSION 1.0
+.GUID e58f9c57-2652-4e17-9676-d6aa4e78cd8b
+.AUTHOR Jannik Reinhard
+.COMPANYNAME
+.COPYRIGHT
+.TAGS
+.LICENSEURI
+.PROJECTURI https://github.com/JayRHa/Intune-Scripts/blob/main/Translate-DeivceAndUserGroups/Translate-AadGroupUserDevice.ps1
+.ICONURI
+.EXTERNALMODULEDEPENDENCIES 
+.REQUIREDSCRIPTS
+.EXTERNALSCRIPTDEPENDENCIES
+.RELEASENOTES
+.PRIVATEDATA
+
 #>
+
+<# 
+
+.DESCRIPTION 
+ Change a user group to a device group based on the device primary contact 
+.INPUTS
+ None required
+.OUTPUTS
+ None
+.NOTES
+ Author: Jannik Reinhard (jannikreinhard.com)
+ Twitter: @jannik_reinhard
+ Release notes:
+  Version 1.0: Init
+#> 
+
+Param()
 
 function Get-GraphAuthentication{
     $GraphPowershellModulePath = "$global:Path/Microsoft.Graph.psd1"

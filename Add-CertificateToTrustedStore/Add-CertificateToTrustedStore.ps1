@@ -1,13 +1,39 @@
-<#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Add-CertificateToTrustedStore
-Description:
-Create config profile to import certificate to the truste cer store
-Release notes:
-Version 1.0: Init
-Version 1.1: Fix bug with lf and cr
+
+<#PSScriptInfo
+.VERSION 1.2
+.GUID 15eada01-a5b3-44c6-bfa7-ed4f466330bb
+.AUTHOR Jannik Reinhard
+.COMPANYNAME
+.COPYRIGHT
+.TAGS
+.LICENSEURI
+.PROJECTURI https://github.com/JayRHa/Intune-Scripts/tree/main/Add-CertificateToTrustedStore
+.ICONURI
+.EXTERNALMODULEDEPENDENCIES 
+.REQUIREDSCRIPTS
+.EXTERNALSCRIPTDEPENDENCIES
+.RELEASENOTES
+.PRIVATEDATA
+
 #>
+
+<# 
+
+.DESCRIPTION 
+ Create intune configuration profile to import certificate to the trusted publisher certificate store  
+.INPUTS
+ None required
+.OUTPUTS
+ Configuration Profile in Intune
+.NOTES
+ Author: Jannik Reinhard (jannikreinhard.com)
+ Twitter: @jannik_reinhard
+ Release notes:
+  Version 1.0: Init
+  Version 1.1: Fix bug with lf and cr
+  Version 1.2: Minor fixes
+#> 
+Param()
 
 function Get-Certificate {
     #Select the cer file

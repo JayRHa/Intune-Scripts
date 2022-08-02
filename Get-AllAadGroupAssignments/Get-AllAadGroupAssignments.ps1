@@ -1,13 +1,38 @@
-<#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Get-AllAadGroupAssignments
-Description:
-Get all intune assignments from an aad group
-Release notes:
-Version 1.0: Init
-Version 1.2: Configure count of group output and fix bug with enviroments with more then 100 groups
+
+<#PSScriptInfo
+.VERSION 1.0
+.GUID a74f64cf-dbd4-45fe-a8f4-c43e23394d45
+.AUTHOR Jannik Reinhard
+.COMPANYNAME
+.COPYRIGHT
+.TAGS
+.LICENSEURI
+.PROJECTURI https://github.com/JayRHa/Intune-Scripts/blob/main/Get-AllAadGroupAssignments/Get-AllAadGroupAssignments.ps1
+.ICONURI
+.EXTERNALMODULEDEPENDENCIES 
+.REQUIREDSCRIPTS
+.EXTERNALSCRIPTDEPENDENCIES
+.RELEASENOTES
+.PRIVATEDATA
+
+#>
+
+<# 
+
+.DESCRIPTION 
+ Get all intune assignments from an aad group
+.INPUTS
+ None required
+.OUTPUTS
+ Assignmments of an specific AAD Group
+.NOTES
+ Author: Jannik Reinhard (jannikreinhard.com)
+ Twitter: @jannik_reinhard
+ Release notes:
+  Version 1.0: Init
 #> 
+Param()
+
 function Get-AuthToken {
     [cmdletbinding()]
     param

@@ -1,12 +1,39 @@
-<#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Get-IntuneStatus
-Description:
-Get an Intune status overview
-Release notes:
-Version 1.0: Init
+
+<#PSScriptInfo
+.VERSION 1.0
+.GUID a71cb63b-4428-471b-9c13-dfa29d6b40f6
+.AUTHOR Jannik Reinhard
+.COMPANYNAME
+.COPYRIGHT
+.TAGS
+.LICENSEURI
+.PROJECTURI https://github.com/JayRHa/Intune-Scripts/tree/main/Change-ImeLogLevel
+.ICONURI
+.EXTERNALMODULEDEPENDENCIES 
+.REQUIREDSCRIPTS
+.EXTERNALSCRIPTDEPENDENCIES
+.RELEASENOTES
+.PRIVATEDATA
+
 #>
+
+<# 
+
+.DESCRIPTION 
+ Get an Intune status overview 
+.INPUTS
+ None required
+.OUTPUTS
+ None
+.NOTES
+ Author: Jannik Reinhard (jannikreinhard.com)
+ Twitter: @jannik_reinhard
+ Release notes:
+  Version 1.0: Init
+#> 
+
+Param()
+
 
 function Get-AuthToken {
     [cmdletbinding()]

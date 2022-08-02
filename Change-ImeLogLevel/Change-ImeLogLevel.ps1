@@ -1,12 +1,37 @@
-<#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Change-ImeLogLevel
-Description:
-Change the loglevel from the Intune management extension
-Release notes:
-Version 1.0: Init
+
+<#PSScriptInfo
+.VERSION 1.0
+.GUID 32017cad-9484-41d1-9f1c-93044955f3e5
+.AUTHOR Jannik Reinhard
+.COMPANYNAME
+.COPYRIGHT
+.TAGS
+.LICENSEURI
+.PROJECTURI https://github.com/JayRHa/Intune-Scripts/tree/main/Change-ImeLogLevel
+.ICONURI
+.EXTERNALMODULEDEPENDENCIES 
+.REQUIREDSCRIPTS
+.EXTERNALSCRIPTDEPENDENCIES
+.RELEASENOTES
+.PRIVATEDATA
+
+#>
+
+<# 
+
+.DESCRIPTION 
+ Change the loglevel of the Intune management extension
+.INPUTS
+ None required
+.OUTPUTS
+ None
+.NOTES
+ Author: Jannik Reinhard (jannikreinhard.com)
+ Twitter: @jannik_reinhard
+ Release notes:
+  Version 1.0: Init
 #> 
+Param()
 
 # Check if Admin
 If (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
