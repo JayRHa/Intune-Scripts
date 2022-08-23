@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.3
+.VERSION 1.4
 .GUID 566b21e4-6fd1-457a-bdf0-7e082a7fb5c8
 .AUTHOR Jannik Reinhard
 .COMPANYNAME
@@ -32,6 +32,7 @@
   Version 1.1: Windows 10 Enterprise LTSC 
   Version 1.2: Add TPM info
   Version 1.3: Minor fixes
+  Version 1.4: Minor fixes
 #> 
 $ProgressPreference = "SilentlyContinue"
 function Get-NetworkInformation {
