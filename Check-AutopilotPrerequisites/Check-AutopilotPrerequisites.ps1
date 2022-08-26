@@ -49,17 +49,16 @@ function Get-NetworkInformation {
 }
 
 function Get-ComputerInformation {
+    $AutopilotCache = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Provisioning\AutopilotPolicyCache" -Name "PolicyJsonCache"
+    $AutopilotCache = $AutopilotCache | ConvertFrom-Json
+    $APProfileName = $AutopilotCache.DeploymentProfileName
+    $OSEdition = systeminfo.exe
+    $OSEdition = $OSEdition[2].Replace("OS Name:","").trim()
     $computerInfo = get-computerinfo
     $tpmInfo = get-tpm
-    $windowsVerison = @(
-        "Windows 10 Enterprise", "Windows 10 Education", "Windows 10 Pro for Workstations", "Windows 10 Pro Education", "Windows 10 Pro", "Windows 10 Enterprise LTSC"
-    )
+    
     Write-Host -NoNewline "  Winodws Edition :     "
-    if($windowsVerison.Contains($($computerInfo.WindowsProductName))){
-        Write-Host -ForegroundColor green $computerInfo.WindowsProductName
-    }else{
-        Write-Host -ForegroundColor red $computerInfo.WindowsProductName
-    }
+    Write-Host $OSEdition
     Write-Host "  Winodws Version :     $($computerInfo.WindowsVersion) $($computerInfo.OSDisplayVersion)"
     Write-Host "  Winodws InstallDate : $($computerInfo.OsInstallDate)"
     Write-Host "  Bios Version :        $($computerInfo.BiosBIOSVersion)"
@@ -72,7 +71,14 @@ function Get-ComputerInformation {
     Write-Host "  Tpm present :         $($tpmInfo.TpmPresent)"
     Write-Host "  Tpm ready :           $($tpmInfo.TpmReady)"
     Write-Host "  Tpm enabled :         $($tpmInfo.TpmEnabled)"
-    
+    if (-not $AutopilotCache.DeploymentProfileName) {
+        Write-Host "  Cached AP Profile :   Not Present"
+        
+    }else{
+        Write-Host "  Cached AP Profile :   Assigned" 
+        Write-Host "  Autopilot Profile : $APProfileName"   
+    }
+
 }
 
 function Get-ConnectionTest {
