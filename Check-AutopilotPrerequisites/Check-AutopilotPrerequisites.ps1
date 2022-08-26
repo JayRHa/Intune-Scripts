@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.5
+.VERSION 1.6
 .GUID 566b21e4-6fd1-457a-bdf0-7e082a7fb5c8
 .AUTHOR Jannik Reinhard
 .COMPANYNAME
@@ -32,6 +32,7 @@
   Version 1.3: Minor fixes
   Version 1.4: Minor fixes
   Version 1.5: Add Autopilot profile info and dhcp bug fix
+  Version 1.6: Buf fix time.windows.com
 #> 
 $ProgressPreference = "SilentlyContinue"
 function Get-NetworkInformation {
@@ -92,7 +93,7 @@ function Get-ConnectionTest {
     @("www.msftconnecttest.com", "ztd.dds.microsoft.com", "cs.dds.microsoft.com", "login.live.com", "login.microsoftonline.com", "aadcdn.msauth.net",
     "licensing.mp.microsoft.com", "EnterpriseEnrollment.manage.microsoft.com", "EnterpriseEnrollment-s.manage.microsoft.com", "EnterpriseRegistration.windows.net", 
     "portal.manage.microsoft.com", "enrollment.manage.microsoft.com", "fe2cr.update.microsoft.com", "euprodimedatapri.azureedge.net", "euprodimedatasec.azureedge.net", 
-    "euprodimedatahotfix.azureedge.net", "ztd.dds.microsoft.com", "cs.dds.microsoft.com", "config.office.com", "graph.windows.net", "manage.microsoft.com", "time.windows.com") | ForEach-Object {
+    "euprodimedatahotfix.azureedge.net", "ztd.dds.microsoft.com", "cs.dds.microsoft.com", "config.office.com", "graph.windows.net", "manage.microsoft.com") | ForEach-Object {
         $result = (Test-NetConnection -Port 443 -ComputerName $_)    
         Write-Host -NoNewline "  $($result.ComputerName) ($($result.RemoteAddress)): "
         if($result.TcpTestSucceeded) {
@@ -101,6 +102,16 @@ function Get-ConnectionTest {
             Write-Host -ForegroundColor Red $result.TcpTestSucceeded
         }
     }
+    $result = (Test-NetConnection -Port 80 -ComputerName "time.windows.com")    
+    Write-Host -NoNewline "  $($result.ComputerName) ($($result.RemoteAddress)): "
+    if($result.TcpTestSucceeded) {
+        Write-Host -ForegroundColor Green $result.TcpTestSucceeded
+    }else{
+        Write-Host -ForegroundColor Red $result.TcpTestSucceeded
+    }
+
+    
+
     Write-Host
 }
 
