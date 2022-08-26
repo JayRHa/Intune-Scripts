@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.4
+.VERSION 1.5
 .GUID 566b21e4-6fd1-457a-bdf0-7e082a7fb5c8
 .AUTHOR Jannik Reinhard
 .COMPANYNAME
@@ -31,6 +31,7 @@
   Version 1.2: Add TPM info
   Version 1.3: Minor fixes
   Version 1.4: Minor fixes
+  Version 1.5: Add Autopilot profile info and dhcp bug fix
 #> 
 $ProgressPreference = "SilentlyContinue"
 function Get-NetworkInformation {
