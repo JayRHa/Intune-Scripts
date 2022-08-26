@@ -13,11 +13,9 @@
 .EXTERNALSCRIPTDEPENDENCIES
 .RELEASENOTES
 .PRIVATEDATA
-
 #>
 
 <# 
-
 .DESCRIPTION 
  Checking if all prerequisites are fullfiled befor starting the enrollment process 
 .INPUTS
@@ -42,7 +40,7 @@ function Get-NetworkInformation {
         Write-Host -ForegroundColor green "$($networkAdapter.Caption):"
 
         $ipAddress = ((Get-ItemProperty -Path ("HKLM:\SYSTEM\CurrentControlSet\services\Tcpip\Parameters\Interfaces\{0}" -f $networkAdapter.SettingID) -Name DhcpIPAddress).DhcpIPAddress)
-        $dhcpServer = ((Get-ItemProperty -ErrorAction SilentlyContinue -Path ("HKLM:\SYSTEM\CurrentControlSet\services\Tcpip\Parameters\Interfaces\{0}" -f $objNACItem.SettingID) -Name DhcpServer).DhcpServer)
+        $dhcpServer = ((Get-ItemProperty -ErrorAction SilentlyContinue -Path ("HKLM:\SYSTEM\CurrentControlSet\services\Tcpip\Parameters\Interfaces\{0}" -f $networkAdapter.SettingID) -Name DhcpServer).DhcpServer)
         Write-Host "  IP address : $ipAddress"
         Write-Host "  DHCP server: $dhcpServer"
     }
@@ -53,12 +51,20 @@ function Get-ComputerInformation {
     $AutopilotCache = $AutopilotCache | ConvertFrom-Json
     $APProfileName = $AutopilotCache.DeploymentProfileName
     $OSEdition = systeminfo.exe
-    $OSEdition = $OSEdition[2].Replace("OS Name:","").trim()
+    $OSEdition = ($OSEdition[2].Replace("OS Name:","").trim()).Replace("Microsoft ","")
     $computerInfo = get-computerinfo
     $tpmInfo = get-tpm
     
-    Write-Host -NoNewline "  Winodws Edition :     "
-    Write-Host $OSEdition
+    $windowsVerison = @(
+        "Windows 10 Enterprise", "Windows 10 Education", "Windows 10 Pro for Workstations", "Windows 10 Pro Education", "Windows 10 Pro", "Windows 10 Enterprise LTSC" ,"Windows 11 Enterprise", "Windows 11 Education", "Windows 11 Pro for Workstations", "Windows 11 Pro Education", "Windows 11 Pro", "Windows 11 Enterprise LTSC"
+    )
+    
+    Write-Host -NoNewline "  Windows Edition :     "
+    if($windowsVerison.Contains($($OSEdition))){
+        Write-Host -ForegroundColor green $OSEdition
+    }else{
+        Write-Host -ForegroundColor red $OSEdition
+    }
     Write-Host "  Winodws Version :     $($computerInfo.WindowsVersion) $($computerInfo.OSDisplayVersion)"
     Write-Host "  Winodws InstallDate : $($computerInfo.OsInstallDate)"
     Write-Host "  Bios Version :        $($computerInfo.BiosBIOSVersion)"
@@ -85,7 +91,7 @@ function Get-ConnectionTest {
     @("www.msftconnecttest.com", "ztd.dds.microsoft.com", "cs.dds.microsoft.com", "login.live.com", "login.microsoftonline.com", "aadcdn.msauth.net",
     "licensing.mp.microsoft.com", "EnterpriseEnrollment.manage.microsoft.com", "EnterpriseEnrollment-s.manage.microsoft.com", "EnterpriseRegistration.windows.net", 
     "portal.manage.microsoft.com", "enrollment.manage.microsoft.com", "fe2cr.update.microsoft.com", "euprodimedatapri.azureedge.net", "euprodimedatasec.azureedge.net", 
-    "euprodimedatahotfix.azureedge.net", "ztd.dds.microsoft.com", "cs.dds.microsoft.com", "config.office.com", "graph.windows.net", "manage.microsoft.com") | ForEach-Object {
+    "euprodimedatahotfix.azureedge.net", "ztd.dds.microsoft.com", "cs.dds.microsoft.com", "config.office.com", "graph.windows.net", "manage.microsoft.com", "time.windows.com") | ForEach-Object {
         $result = (Test-NetConnection -Port 443 -ComputerName $_)    
         Write-Host -NoNewline "  $($result.ComputerName) ($($result.RemoteAddress)): "
         if($result.TcpTestSucceeded) {
