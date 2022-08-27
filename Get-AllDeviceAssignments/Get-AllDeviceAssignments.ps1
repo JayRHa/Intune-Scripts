@@ -88,7 +88,7 @@ function Get-GraphCall {
     return Invoke-RestMethod -Uri https://graph.microsoft.com/beta/$apiUri -Headers $authToken -Method $method
 }
 
-function Get-DeviceId {
+function Get-Device {
     param(
         [Parameter(Mandatory)]
         $deviceName
@@ -154,6 +154,21 @@ function Get-Applications {
 
 }
 
+function Get-DeviceInfo {
+    param(
+        [Parameter(Mandatory)]
+        $device
+    )
+
+    Write-Host "  Hostname:                 $($device.deviceName)"
+    Write-Host "  Deviceid:                 $($device.id)"
+    Write-Host "  Ownertype:                $($device.ownerType)"
+    Write-Host "  Enrollmenttime:           $($device.enrolledDateTime)"
+    Write-Host "  OS version:               $($device.osVersion)"
+    Write-Host "  User:                     $($device.emailAddress)"
+    Write-Host "  EnrollmentProfile:        $($device.enrollmentProfileName)"
+}
+
 #########################################################################################################
 ############################################ Start ######################################################
 #########################################################################################################
@@ -172,9 +187,10 @@ $deviceId = ""
 while(-not $deviceId)
 {
     $deviceName = Read-Host "Enter the name of the device"
-    $device = Get-DeviceId -deviceName $deviceName
+    $device = Get-Device -deviceName $deviceName
     if($device) { $deviceId = $device.id}
 }
+
 
 Write-Host -ForegroundColor Yellow "######################################"
 Write-Host -ForegroundColor Yellow "#      Get Device Informations       #"
@@ -183,12 +199,7 @@ Write-Host
 Write-Host -ForegroundColor Yellow "---------------------------------"
 Write-Host -ForegroundColor Yellow "|      Device information       |"
 Write-Host -ForegroundColor Yellow "---------------------------------"
-Write-Host "  Hostname:                 $($device.deviceName)"
-Write-Host "  Deviceid:                 $($device.id)"
-Write-Host "  Ownertype:                $($device.ownerType)"
-Write-Host "  Enrollmenttime:           $($device.enrolledDateTime)"
-Write-Host "  OS version:               $($device.osVersion)"
-Write-Host "  User:                     $($device.emailAddress)"
+Get-DeviceInfo -device $device
 Write-Host
 Write-Host -ForegroundColor Yellow "---------------------------------"
 Write-Host -ForegroundColor Yellow "|       Group memebership       |"
