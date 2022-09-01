@@ -59,7 +59,7 @@ function Get-ComputerInformation {
     $tpmInfo = get-tpm
     
     $windowsVerison = @(
-        "Windows 10 Enterprise", "Windows 10 Education", "Windows 10 Pro for Workstations", "Windows 10 Pro Education", "Windows 10 Pro", "Windows 10 Enterprise LTSC" ,"Windows 11 Enterprise", "Windows 11 Education", "Windows 11 Pro for Workstations", "Windows 11 Pro Education", "Windows 11 Pro", "Windows 11 Enterprise LTSC"
+        "Windows 10 Enterprise", "Windows 10 Education", "Windows 10 Pro for Workstations", "Windows 10 Pro Education", "Windows 10 Pro" ,"Windows 11 Enterprise", "Windows 11 Education", "Windows 11 Pro for Workstations", "Windows 11 Pro Education", "Windows 11 Pro"
     )
     
     Write-Host -NoNewline "  Windows Edition :     "
