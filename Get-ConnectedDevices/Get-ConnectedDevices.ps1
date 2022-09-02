@@ -1,4 +1,13 @@
-# Get lonove devices
+<#
+Version: 1.0
+Author: Jannik Reinhard (jannikreinhard.com)
+Script: Get-ConnectedDevices
+Description:
+Get connected devices to a pc for a detection script
+Release notes:
+Version 1.0: Init
+#> 
+
 $deviceId = @('')
 
 foreach($device in Get-PnpDevice){
