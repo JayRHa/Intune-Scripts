@@ -8,10 +8,10 @@ Release notes:
 Version 1.0: Init
 #> 
 
-$deviceId = @('')
+$deviceIds = @('')
 
 foreach($device in Get-PnpDevice){
-    if(($lenoveDockIds | %{$device.DeviceID -like "$_*"}) -contains $true){
+    if(($deviceIds | %{$device.DeviceID -like "$_*"}) -contains $true){
         Write-Host "Device found"
         Exit 1
     }
