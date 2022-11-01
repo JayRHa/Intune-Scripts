@@ -43,7 +43,6 @@ function Get-GraphCall {
 }
 
 #### Start#####
-# Add the ExchangePowerShell automation functions
 
 # Variables
 $tenantId = Get-AutomationVariable -Name 'TenantId'
