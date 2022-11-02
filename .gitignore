@@ -1,1 +1,4 @@
-.helper.tmp
+*.tmp
+Sync-SecWithDistributionGroup/test.test
+*.pfx
+*.cer

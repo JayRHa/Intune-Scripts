@@ -54,13 +54,61 @@ $certThumprint = "THETHUMBPRINTOFTHE CERT"
 $organisation = "YOURORGNAME.onmicrosoft.com"
 
 $secGroupId = 'ID OF THE SEC GROUP'
-$distGroupName = 'ABCTest'
+$distGroupName = 'DIST GROUP NAME'
+
 
 # Authentication
 $global:authToken = Get-AuthHeader -tenantId $tenantId -clientId $clientId -clientSecret $clientSecret
-
 Connect-ExchangeOnline -CertificateThumbPrint $certThumprint -AppID $certAppId -Organization $organisation
 
-(Get-GraphCall -apiUri "groups/$secGroupId/members").value | ForEach-Object {
-    Add-DistributionGroupMember $distGroupName -Member $_.userPrincipalName
+# Check if group exist
+try {
+    if(-not (Get-DistributionGroup | Where-Object{$_.DisplayName -eq $distGroupName})){
+        Write-Error "Distribution group $distGroupName not found"
+        return
+    }
+}catch{
+    Write-Error "$_"
+    return
 }
+
+
+# Get sec group member
+try{
+    $secGroupMember = (Get-GraphCall -apiUri "groups/$secGroupId/members").value
+}catch{
+    Write-Error "Failed to get member of security group $secGroupId : $_"
+}
+
+# Get distribution group member
+try{
+    $distributionGroupMember = Get-DistributionGroupMember -Identity $distGroupName
+}catch{
+    Write-Error "Failed to get member of distribution group $secGroupId : $_"
+}
+
+# Get member to add and delete
+$toDelete = $distributionGroupMember | Where {$_.name -notin $secGroupMember.mailNickname}
+$toAdd = $secGroupMember | Where {$_.mailNickname -notin $distributionGroupMember.name} 
+
+
+# Add to distribution group
+$toAdd | ForEach-Object {
+    try{
+        Add-DistributionGroupMember $distGroupName -Member $_.userPrincipalName
+        Write-Host "Sucessfully add $($_.userPrincipalName) to distribution group"
+    }catch{
+        Write-Error "Failed to add member $($_.userPrincipalName): $_"
+    }
+}
+
+# Delete from distribution group
+$toDelete | ForEach-Object {
+    try{
+        Remove-DistributionGroupMember $distGroupName -Member $_.Name -Confirm:$false
+        Write-Host "Sucessfully remove $($_.Name) from distribution group"
+    }catch{
+        Write-Error "Failed to delete member $($_.userPrincipalName): $_"
+    }
+}
+
