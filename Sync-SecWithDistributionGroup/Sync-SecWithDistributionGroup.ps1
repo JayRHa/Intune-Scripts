@@ -3,112 +3,108 @@ Version: 1.0
 Author: Jannik Reinhard (jannikreinhard.com)
 Script: Sync-DistributionGroupWithSecurityGroup
 Description:
-Sync a distribution group with an security group
+Mirror a distribution group with an security groups members
 Release notes:
 Version 1.0: Init
+Verison 2.0b: Reworked the authentication scheme to use system managed identity and be more robust (Michael Mardahl)
 #> 
-Function Get-AuthHeader{
-    param (
-        [parameter(Mandatory=$true)]$tenantId,
-        [parameter(Mandatory=$true)]$clientId,
-        [parameter(Mandatory=$true)]$clientSecret
-       )
-    
-    $authBody=@{
-        client_id=$clientId
-        client_secret=$clientSecret
-        scope="https://graph.microsoft.com/.default"
-        grant_type="client_credentials"
-    }
 
-    $uri="https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token"
-    $accessToken=Invoke-WebRequest -Uri $uri -ContentType "application/x-www-form-urlencoded" -Body $authBody -Method Post -ErrorAction Stop -UseBasicParsing
-    $accessToken=$accessToken.content | ConvertFrom-Json
 
-    $authHeader = @{
-        'Content-Type'='application/json'
-        'Authorization'="Bearer " + $accessToken.access_token
-        'ExpiresOn'=$accessToken.expires_in
-    }
-    
-    return $authHeader
-}
+#region declarations
+$tenantDomain = "Fabrikam.onmicrosoft.com" #.onmicrosoft.com domain for exchange online connection
+#$EXOcmdlets = "New-DistributionGroup,Update-DistributionGroupMember,Get-DistributionGroupMember" #cmdlets to load from Exchange Online
+$graphVersion = "v1.0" #version of Graph endpoint
+$secGroupPrefix = "FeatureRollout_" #prefix of the groups to mirror as Distribution groups
+$distGroupSuffix = "_dist" #suffix added to the mirror groups. These are created if they don't exist
 
-function Get-GraphCall {
+#endregion declarations
+
+#region functions
+function Invoke-GraphRequest {
     param(
         [Parameter(Mandatory)]
-        $apiUri
+        $query
     )
-    return Invoke-RestMethod -Uri https://graph.microsoft.com/beta/$apiUri -Headers $authToken -Method GET
+    $response = Invoke-RestMethod -Uri https://graph.microsoft.com/$graphVersion$query -Headers $graphToken -Method GET
+	return $response.value
+
+}
+#endregion functions
+
+#region execute
+
+"Please enable appropriate Enterprise App permissions to the system identity of this automation account. Otherwise, the runbook may fail..."
+"Office 365 Exchange Online - Exchange.ManageAsApp"
+"Microsoft Graph - Group.ReadWrite.All (Or owner of the "
+
+try
+{
+    "[INFO] Logging in to Azure with managed identity"
+    Connect-AzAccount -Identity
+
+	"[INFO] Acquire access token for Microsoft Graph"
+	$token = (Get-AzAccessToken -ResourceUrl 'https://graph.microsoft.com').Token
+	$global:graphToken = @{Authorization="Bearer $token"}
+	#$global:graphToken = @{Authorization="Bearer $token";ConsistencyLevel="eventual"} #enables advanced queries
+
+	"Logging in to Exchange Online with managed identity"
+	Connect-ExchangeOnline -ManagedIdentity -Organization $tenantDomain -ShowBanner:$false
+}
+catch {
+    Write-Error -Message $_.Exception
+    throw $_.Exception
 }
 
-#### Start#####
+#Get Security Groups
+$SecurityGroups = Invoke-GraphRequest "/groups?`$filter=mailEnabled eq false and startsWith(displayName, '$secGroupPrefix')"
 
-# Variables
-$tenantId = Get-AutomationVariable -Name 'TenantId'
-$clientId = Get-AutomationVariable -Name 'AppId'
-$clientSecret = Get-AutomationVariable -Name 'AppSecret'
+#mirror each security group into a distribution group individually
+foreach ($SecurityGroup in $SecurityGroups)
+{
+	$distGroupName = "$($SecurityGroup.displayName)$distGroupSuffix"
+	#Get transitive members of security group
+	$secMembers = Invoke-GraphRequest "/groups/$($SecurityGroup.id)/transitiveMembers"
+	
+	#find existing distribution groups and create a new one if none are found
+	$distGroup = Get-DistributionGroup -Identity $distGroupName -ErrorAction SilentlyContinue
 
-$certAppId = "CLIENTIDCERT"
-$certThumprint = "THETHUMBPRINTOFTHE CERT"
-$organisation = "YOURORGNAME.onmicrosoft.com"
+	if($distGroup){
+		"[INFO] Existing group found ($distGroupName). Mirroring members."
 
-$secGroupId = 'ID OF THE SEC GROUP'
-$distGroupName = 'DIST GROUP NAME'
+		$distMembers = Get-DistributionGroupMember -Identity $distGroupName
+		$toRemove = $distMembers | Where {$_.ExternalDirectoryObjectId -notin $secMembers.id}
+		$toAdd = $secMembers | Where {$_.id -notin $distMembers.ExternalDirectoryObjectId} 
+
+		#add members
+		foreach ($member in $toAdd){
+
+			try {
+				Add-DistributionGroupMember -Identity $distGroupName -Member $member.userPrincipalName
+				"[INFO] Added $($member.userPrincipalName)"
+			} catch {
+				"[WARNING] Unable to add $($member.userPrincipalName) - Might not be a mail user, so it doesn't matter that much."
+			}
+		}
+
+		#remove members
+		foreach ($member in $toRemove){
+
+			try {
+				Remove-DistributionGroupMember -Identity $distGroupName -Member $member.PrimarySmtpAddress -Confirm:$false
+				"[INFO] Removed $($member.PrimarySmtpAddress)"
+			} catch {
+				"[WARNING] Unable to remove $($member.PrimarySmtpAddress) - Might not be a mail user, so it doesn't matter that much."
+			}
+		}
+
+	} else {
+		"[INFO] No group found ($distGroupName). Creating distribution group and mirroring members on next run."
+
+		New-DistributionGroup -Name $distGroupName -Type "Distribution"
+	}
+	
 
 
-# Authentication
-$global:authToken = Get-AuthHeader -tenantId $tenantId -clientId $clientId -clientSecret $clientSecret
-Connect-ExchangeOnline -CertificateThumbPrint $certThumprint -AppID $certAppId -Organization $organisation
-
-# Check if group exist
-try {
-    if(-not (Get-DistributionGroup | Where-Object{$_.DisplayName -eq $distGroupName})){
-        Write-Error "Distribution group $distGroupName not found"
-        return
-    }
-}catch{
-    Write-Error "$_"
-    return
 }
-
-
-# Get sec group member
-try{
-    $secGroupMember = (Get-GraphCall -apiUri "groups/$secGroupId/members").value
-}catch{
-    Write-Error "Failed to get member of security group $secGroupId : $_"
-}
-
-# Get distribution group member
-try{
-    $distributionGroupMember = Get-DistributionGroupMember -Identity $distGroupName
-}catch{
-    Write-Error "Failed to get member of distribution group $secGroupId : $_"
-}
-
-# Get member to add and delete
-$toDelete = $distributionGroupMember | Where {$_.name -notin $secGroupMember.mailNickname}
-$toAdd = $secGroupMember | Where {$_.mailNickname -notin $distributionGroupMember.name} 
-
-
-# Add to distribution group
-$toAdd | ForEach-Object {
-    try{
-        Add-DistributionGroupMember $distGroupName -Member $_.userPrincipalName
-        Write-Host "Sucessfully add $($_.userPrincipalName) to distribution group"
-    }catch{
-        Write-Error "Failed to add member $($_.userPrincipalName): $_"
-    }
-}
-
-# Delete from distribution group
-$toDelete | ForEach-Object {
-    try{
-        Remove-DistributionGroupMember $distGroupName -Member $_.Name -Confirm:$false
-        Write-Host "Sucessfully remove $($_.Name) from distribution group"
-    }catch{
-        Write-Error "Failed to delete member $($_.userPrincipalName): $_"
-    }
-}
-
+Disconnect-ExchangeOnline -Confirm:$false
+#endregion execute
