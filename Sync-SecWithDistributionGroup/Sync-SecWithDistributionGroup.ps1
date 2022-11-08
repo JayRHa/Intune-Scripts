@@ -13,7 +13,7 @@ Verison 2.0b: Reworked the authentication scheme to use system managed identity 
 #region declarations
 $tenantDomain = "Fabrikam.onmicrosoft.com" #.onmicrosoft.com domain for exchange online connection
 #$EXOcmdlets = "New-DistributionGroup,Update-DistributionGroupMember,Get-DistributionGroupMember" #cmdlets to load from Exchange Online
-$graphVersion = "v1.0" #verison of Graph endpoint
+$graphVersion = "v1.0" #version of Graph endpoint
 $secGroupPrefix = "FeatureRollout_" #prefix of the groups to mirror as Distribution groups
 $distGroupSuffix = "_dist" #suffix added to the mirror groups. These are created if they don't exist
 
@@ -74,8 +74,8 @@ foreach ($SecurityGroup in $SecurityGroups)
 		"[INFO] Existing group found ($distGroupName). Mirroring members."
 
 		$distMembers = Get-DistributionGroupMember -Identity $distGroupName
-		$toRemove = $distMembers | Where {$_.name -notin $secMembers.mailNickname}
-		$toAdd = $secMembers | Where {$_.mailNickname -notin $distMembers.name} 
+		$toRemove = $distMembers | Where {$_.ExternalDirectoryObjectId -notin $secMembers.id}
+		$toAdd = $secMembers | Where {$_.id -notin $distMembers.ExternalDirectoryObjectId} 
 
 		#add members
 		foreach ($member in $toAdd){
