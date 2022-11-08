@@ -64,8 +64,6 @@ foreach ($SecurityGroup in $SecurityGroups)
 	$distGroupName = "$($SecurityGroup.displayName)$distGroupSuffix"
 	#Get transitive members of security group
 	$secMembers = Invoke-GraphRequest "/groups/$($SecurityGroup.id)/transitiveMembers"
-	#Remove guest accounts
-	#$members = $members | where-object {$_.userPrincipalName -notlike "*#EXT#*"}
 	
 	#find existing distribution groups and create a new one if none are found
 	$distGroup = Get-DistributionGroup -Identity $distGroupName -ErrorAction SilentlyContinue
@@ -92,10 +90,10 @@ foreach ($SecurityGroup in $SecurityGroups)
 		foreach ($member in $toRemove){
 
 			try {
-				Remove-DistributionGroupMember -Identity $distGroupName -Member $member.userPrincipalName -Confirm:$false
-				"[INFO] Removed $($member.userPrincipalName)"
+				Remove-DistributionGroupMember -Identity $distGroupName -Member $member.PrimarySmtpAddress -Confirm:$false
+				"[INFO] Removed $($member.PrimarySmtpAddress)"
 			} catch {
-				"[WARNING] Unable to remove $($member.userPrincipalName) - Might not be a mail user, so it doesn't matter that much."
+				"[WARNING] Unable to remove $($member.PrimarySmtpAddress) - Might not be a mail user, so it doesn't matter that much."
 			}
 		}
 
