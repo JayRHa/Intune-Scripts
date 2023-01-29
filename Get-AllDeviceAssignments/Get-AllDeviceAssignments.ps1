@@ -216,8 +216,5 @@ Write-Host -ForegroundColor Yellow "|          Applications         |"
 Write-Host -ForegroundColor Yellow "---------------------------------"
 Get-Applications -deviceId $deviceId
 Write-Host
-Write-Host -ForegroundColor Yellow "######################################"
-Write-Host -ForegroundColor Yellow "#  Autopilot prerequisite check Done #"
-Write-Host -ForegroundColor Yellow "######################################"
 
 
