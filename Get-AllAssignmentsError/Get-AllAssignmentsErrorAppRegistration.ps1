@@ -7,46 +7,30 @@ Get all failed assignment in the tenant as csv
 Release notes:
 Version 1.0: Init
 #> 
-function Get-AuthToken {
-    [cmdletbinding()]
-    param
-    (
-        [Parameter(Mandatory=$true)]
-        $User
-    )
-
-    $userUpn = New-Object "System.Net.Mail.MailAddress" -ArgumentList $User
-    $tenant = $userUpn.Host
-    $AadModule = Get-Module -Name "AzureAD" -ListAvailable
-    if ($AadModule -eq $null) {
-        Write-Host "AzureAD PowerShell module not found, looking for AzureADPreview"
-        $AadModule = Get-Module -Name "AzureADPreview" -ListAvailable
+Function Get-AuthHeader{
+    param (
+        [parameter(Mandatory=$true)]$tenantId,
+        [parameter(Mandatory=$true)]$clientId,
+        [parameter(Mandatory=$true)]$clientSecret
+       )
+    
+    $authBody=@{
+        client_id=$clientId
+        client_secret=$clientSecret
+        scope="https://graph.microsoft.com/.default"
+        grant_type="client_credentials"
     }
 
-    $adal = Join-Path $AadModule.ModuleBase "Microsoft.IdentityModel.Clients.ActiveDirectory.dll"
-    $adalforms = Join-Path $AadModule.ModuleBase "Microsoft.IdentityModel.Clients.ActiveDirectory.Platform.dll"
+    $uri="https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token"
+    $accessToken=Invoke-WebRequest -Uri $uri -ContentType "application/x-www-form-urlencoded" -Body $authBody -Method Post -ErrorAction Stop -UseBasicParsing
+    $accessToken=$accessToken.content | ConvertFrom-Json
 
-    Add-Type -Path $adal
-    Add-Type -Path $adalforms
-    # [System.Reflection.Assembly]::LoadFrom($adal) | Out-Null
-    # [System.Reflection.Assembly]::LoadFrom($adalforms) | Out-Null
-    $clientId = "d1ddf0e4-d672-4dae-b554-9d5bdfd93547"
-    $redirectUri = "urn:ietf:wg:oauth:2.0:oob"
-    $resourceAppIdURI = "https://graph.microsoft.com"
-    $authority = "https://login.microsoftonline.com/$Tenant"
-
-    $authContext = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext" -ArgumentList $authority
-    $platformParameters = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.PlatformParameters" -ArgumentList "Auto"
-    $userId = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier" -ArgumentList ($User, "OptionalDisplayableId")
-    $authResult = $authContext.AcquireTokenAsync($resourceAppIdURI,$clientId,$redirectUri,$platformParameters,$userId).Result
-
-      
     $authHeader = @{
         'Content-Type'='application/json'
-        'Authorization'="Bearer " + $authResult.AccessToken
-        'ExpiresOn'=$authResult.ExpiresOn
-        }
-
+        'Authorization'="Bearer " + $accessToken.access_token
+        'ExpiresOn'=$accessToken.expires_in
+    }
+    
     return $authHeader
 }
 
@@ -81,13 +65,13 @@ function Get-FailedAppAssignments{
 #################################################################################################
 ########################################### Start ###############################################
 #################################################################################################
-if(-not $global:authToken){
-    if($User -eq $null -or $User -eq ""){
-    $User = Read-Host -Prompt "Please specify your user principal name for Azure Authentication"
-    Write-Host
-    }
-    $global:authToken = Get-AuthToken -User $User
-}
+# Variables
+$tenantId = Get-AutomationVariable -Name 'TenantId'
+$clientId = Get-AutomationVariable -Name 'AppId'
+$clientSecret = Get-AutomationVariable -Name 'AppSecret'
+
+# Authentication
+$global:authToken = Get-AuthHeader -tenantId $tenantId -clientId $clientId -clientSecret $clientSecret
 
 # Config Profiles
 $config = (Get-GraphCall -url 'deviceManagement/deviceConfigurations?$select=id,displayName').value
