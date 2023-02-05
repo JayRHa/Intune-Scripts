@@ -112,5 +112,6 @@ $apps | ForEach-Object {
     }
 }
 
+#Generate CSV
 $configProfiles | Export-Csv -Path .\configProfileErrors.csv -NoTypeInformation
 $appsObject | Export-Csv -Path .\appInstallationErrors.csv -NoTypeInformation

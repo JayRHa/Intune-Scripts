@@ -66,6 +66,10 @@ function Get-FailedAppAssignments{
 ########################################### Start ###############################################
 #################################################################################################
 # Variables
+$MailSender = "mail@abc.onmicrosoft.com"
+$MailTo = "mail@abc.onmicrosoft.com"
+
+# Automation Secrets
 $tenantId = Get-AutomationVariable -Name 'TenantId'
 $clientId = Get-AutomationVariable -Name 'AppId'
 $clientSecret = Get-AutomationVariable -Name 'AppSecret'
@@ -96,5 +100,47 @@ $apps | ForEach-Object {
     }
 }
 
+
+#Generate CSV
 $configProfiles | Export-Csv -Path .\configProfileErrors.csv -NoTypeInformation
 $appsObject | Export-Csv -Path .\appInstallationErrors.csv -NoTypeInformation
+$configProfiles_csv = [Convert]::ToBase64String([IO.File]::ReadAllBytes(".\configProfileErrors.csv"))
+$appsObject_csv = [Convert]::ToBase64String([IO.File]::ReadAllBytes(".\appInstallationErrors.csv"))
+
+#Send Mail    
+$URLsend = "https://graph.microsoft.com/v1.0/users/$MailSender/sendMail"
+$BodyJsonsend = @"
+{
+    "message": {
+      "subject": "Intune error report",
+      "body": {
+        "contentType": "Text",
+        "content": "Dear Admin, this Mail contains the error report from Intunn"
+      },
+      "toRecipients": [
+        {
+          "emailAddress": {
+            "address": "$MailTo"
+          }
+        }
+      ],
+      "attachments": [
+        {
+          "@odata.type": "#microsoft.graph.fileAttachment",
+          "name": "configProfileErrors.csv",
+          "contentType": "text/plain",
+          "contentBytes": "$configProfiles_csv"
+        },
+        {
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            "name": "appInstallationErrors.csv",
+            "contentType": "text/plain",
+            "contentBytes": "$appsObject_csv"
+        }
+      ]
+    }
+  }
+"@
+
+
+Invoke-RestMethod -Method POST -Uri $URLsend -Headers $global:authToken -Body $BodyJsonsend
