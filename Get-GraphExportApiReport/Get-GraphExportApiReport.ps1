@@ -77,6 +77,7 @@ $status = (Invoke-RestMethod -Uri "https://graph.microsoft.com/beta/deviceManage
 while (-not ($status -eq 'completed')) {
     $response = Invoke-RestMethod -Uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs('$id')" -Headers $authToken -Method Get
     $status = ($response).status
+    Start-Sleep -Seconds 2
 }
 $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 Invoke-WebRequest -Uri $response.url -OutFile "$scriptPath/intuneExport.zip"
