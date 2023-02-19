@@ -91,6 +91,10 @@ $groups = @()
 $groups += '{"GroupName" : "WIN-Apps-GroupFirstWave","Percent" : "20"}' | ConvertFrom-Json
 $groups += '{"GroupName" : "WIN-Apps-GroupMidWave","Percent" : "30"}' | ConvertFrom-Json
 $groups += '{"GroupName" : "WIN-Apps-GroupLastWave","Percent" : "50"}' | ConvertFrom-Json
+
+# Filter
+$filter = ''
+#$filter = ('?$filter=operatingSystem eq ' + "'Windows'")
 #################################################################################################
 
 # Check Input
@@ -105,7 +109,7 @@ if($sum -ne 100){
 $global:authToken = Get-AuthHeader -tenantId $tenantId -clientId $clientId -clientSecret $clientSecret
 
 # Get All devices
-$devices = (Get-GraphCall -apiUri "devices").value
+$devices = (Get-GraphCall -apiUri ("devices" + $filter)).value
 
 
 $memberCount = 0
