@@ -199,6 +199,12 @@ if(-not $global:authToken){
 
 $allDevices = Get-Win10IntuneManagedDevices
 $filter = "*" # If nothing specified then all devices. Use wildcard e.g. *
+#Example to filter based on the OS Version
+#$filter = "*10.0.19045*"
+#if(-not ($filter -eq '*')){
+#    $allDevices = $allDevices | Where-Object {$_.osVersion -like $filter}
+#}
+
 
 if(-not ($filter -eq '*')){
     $allDevices = $allDevices | Where-Object {$_.deviceName -like $filter}
