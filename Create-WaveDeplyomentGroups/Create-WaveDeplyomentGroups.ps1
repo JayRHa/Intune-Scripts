@@ -43,6 +43,25 @@ function Get-GraphCall {
     return Invoke-RestMethod -Uri https://graph.microsoft.com/beta/$apiUri -Headers $authToken -Method GET
 }
 
+function Get-GraphCallPaging {
+    param(
+        [Parameter(Mandatory)]
+        $apiUri
+    )
+
+    $url = "https://graph.microsoft.com/beta/$apiUri"
+    $results = @()
+
+    do {
+        $response = Invoke-RestMethod -Uri $url -Headers $authToken -Method GET
+        $results += $response.value
+        $url = $response.'@odata.nextLink'
+    } while ($url)
+
+    return $results
+}
+
+
 function Invoke-GroupCreation {
     param(
         [Parameter(Mandatory)]$groupName
@@ -109,7 +128,9 @@ if($sum -ne 100){
 $global:authToken = Get-AuthHeader -tenantId $tenantId -clientId $clientId -clientSecret $clientSecret
 
 # Get All devices
-$devices = (Get-GraphCall -apiUri ("devices" + $filter)).value
+#$devices = (Get-GraphCall -apiUri ("devices" + $filter)).value
+$devices = (Get-GraphCallPaging -apiUri ("devices" + $filter)).value
+
 
 
 $memberCount = 0
