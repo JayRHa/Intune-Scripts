@@ -79,6 +79,10 @@ while (-not ($status -eq 'completed')) {
     $status = ($response).status
     Start-Sleep -Seconds 2
 }
-$scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
-Invoke-WebRequest -Uri $response.url -OutFile "$scriptPath/intuneExport.zip"
-Expand-Archive "$scriptPath/intuneExport.zip" -DestinationPath "$scriptPath/intuneExport"
+
+Invoke-WebRequest -Uri $response.url -OutFile "./intuneExport.zip"
+Expand-Archive "./intuneExport.zip" -DestinationPath "./intuneExport" 
+
+## Copy the file to an storage or do some actions
+########
+########
