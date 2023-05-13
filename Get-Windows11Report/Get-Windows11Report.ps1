@@ -17,6 +17,10 @@ $MailSender = ""
 ########################################### Start ###############################################
 #################################################################################################
 
+# Authenticate and connect to Microsoft Graph
+Connect-AzAccount -Identity
+$token = Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com"
+
 Connect-MgGraph -AccessToken $token.Token
 
 
