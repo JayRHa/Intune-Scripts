@@ -20,7 +20,7 @@ $MailSender = ""
 Connect-MgGraph -AccessToken $token.Token
 
 
-$devices = Get-MgDeviceManagementManagedDevice -Filter "contains(operatingSystem,'Windows')"
+$devices = Get-MgDeviceManagementManagedDevice -all -Filter "contains(operatingSystem,'Windows')"
 $windows11Devices = $devices | Where-Object { $_.OsVersion -ge "10.0.22000" }
 
 # Calculate device counts
