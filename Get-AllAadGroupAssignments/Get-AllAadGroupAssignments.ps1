@@ -1,6 +1,6 @@
 
 <#PSScriptInfo
-.VERSION 1.0
+.VERSION 2.1
 .GUID a74f64cf-dbd4-45fe-a8f4-c43e23394d45
 .AUTHOR Jannik Reinhard
 .COMPANYNAME
@@ -30,109 +30,69 @@
  Twitter: @jannik_reinhard
  Release notes:
   Version 1.0: Init
+  Version 2.0: Rewrite
+  Version 2.1: Generalization
 #> 
 Param()
 
-function Get-AuthToken {
-    [cmdletbinding()]
-    param
-    (
-        [Parameter(Mandatory=$true)]
-        $User
-    )
-
-    $userUpn = New-Object "System.Net.Mail.MailAddress" -ArgumentList $User
-    $tenant = $userUpn.Host
-    $AadModule = Get-Module -Name "AzureAD" -ListAvailable
-    if ($AadModule -eq $null) {
-        Write-Host "AzureAD PowerShell module not found, looking for AzureADPreview"
-        $AadModule = Get-Module -Name "AzureADPreview" -ListAvailable
-    }
-
-    $adal = Join-Path $AadModule.ModuleBase "Microsoft.IdentityModel.Clients.ActiveDirectory.dll"
-    $adalforms = Join-Path $AadModule.ModuleBase "Microsoft.IdentityModel.Clients.ActiveDirectory.Platform.dll"
-
-    Add-Type -Path $adal
-    Add-Type -Path $adalforms
-    # [System.Reflection.Assembly]::LoadFrom($adal) | Out-Null
-    # [System.Reflection.Assembly]::LoadFrom($adalforms) | Out-Null
-    $clientId = "d1ddf0e4-d672-4dae-b554-9d5bdfd93547"
-    $redirectUri = "urn:ietf:wg:oauth:2.0:oob"
-    $resourceAppIdURI = "https://graph.microsoft.com"
-    $authority = "https://login.microsoftonline.com/$Tenant"
-
-    $authContext = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext" -ArgumentList $authority
-    $platformParameters = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.PlatformParameters" -ArgumentList "Auto"
-    $userId = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier" -ArgumentList ($User, "OptionalDisplayableId")
-    $authResult = $authContext.AcquireTokenAsync($resourceAppIdURI,$clientId,$redirectUri,$platformParameters,$userId).Result
-
-      
-    $authHeader = @{
-        'Content-Type'='application/json'
-        'Authorization'="Bearer " + $authResult.AccessToken
-        'ExpiresOn'=$authResult.ExpiresOn
-        }
-
-    return $authHeader
-}
-
-function Get-GraphCall {
+function Write-Entry{
     param(
-        [Parameter(Mandatory)]
-        $apiUri,
-        [Parameter(Mandatory)]
-        $method
+        [Parameter(Mandatory)]$topic,
+        [Parameter(Mandatory)]$value
     )
-    return Invoke-RestMethod -Uri https://graph.microsoft.com/beta/$apiUri -Headers $authToken -Method $method
-}
+    Write-Host "$($topic): " -ForegroundColor White -NoNewline
+    Write-Host $value -ForegroundColor Yellow
 
-function Get-AllAadGroup{
-    $return = Get-GraphCall -apiUri "groups" -method "GET"
-    $groups = $return.value
-    while($return.'@odata.nextLink')
-    {
-        $return = Invoke-RestMethod -Uri $return.'@odata.nextLink' -Headers $authToken -Method "GET"
-        $groups += $return.value
-    }
-    
-    return $groups
 }
-
-function Check-GroupName{
+function Get-GraphCallCustom {
     param(
-        [Parameter(Mandatory)]
-        $groupName,
-        [Parameter(Mandatory)]
-        $allGroups
+        [Parameter(Mandatory)]$endpoint,
+        $value=$true
     )
+    $uri = "https://graph.microsoft.com/beta/$endpoint"
+    if($value -eq $true){
+        return (Invoke-MgGraphRequest -Uri $uri -Method Get -OutputType PSObject).Value
+    }else{
+        return Invoke-MgGraphRequest -Uri $uri -Method Get -OutputType PSObject
+    }
+}
 
-    if($groupName -eq "All users"){return $true}
-    if($groupName -eq "All devices"){return $true}
-
-    foreach ($group in $allGroups) {
-        if($group.displayName -eq $aadGroupName) {
-            return $true
+function Get-GroupPerName{
+    param(
+        [Parameter(Mandatory)]$groupName
+    )
+    if($groupName -eq "All users"){
+        return [PSCustomObject]@{
+            id               = 'acacacac-9df4-4c7d-9d50-4ef0226f57a9'
+            createdDateTime  = '00/00/0000'
+            displayName      = 'All users (System group)'
         }
     }
-    return $false
-}
-
-function Get-GroupId{
-    param(
-        [Parameter(Mandatory)]
-        $groupName,
-        [Parameter(Mandatory)]
-        $allGroups
-    )
-    if($groupName -eq "All users"){return "acacacac-9df4-4c7d-9d50-4ef0226f57a9"}
-    if($groupName -eq "All devices"){return "adadadad-808e-44e2-905a-0b7873a8a531"}
-
-    foreach ($group in $groups) {
-        if($group.displayName -eq $aadGroupName) {
-            return $group.id
+    if($groupName -eq "All devices"){
+        return [PSCustomObject]@{
+            id               = 'adadadad-808e-44e2-905a-0b7873a8a531'
+            createdDateTime  = '00/00/0000'
+            displayName      = 'All devices (System group)'
         }
     }
-    return $null
+
+    return Get-GraphCallCustom -endpoint ('groups?$filter=displayName eq ' + "'$groupName'")
+}
+
+function Get-Topic{
+    param(
+        [Parameter(Mandatory)]$topicHeadline,
+        [Parameter(Mandatory)]$groupId,
+        [Parameter(Mandatory)]$uri,
+        [Parameter(Mandatory)]$uriAssignment,
+        [Parameter(Mandatory)]$type
+    )
+    # Enrollment Status Page
+    Write-Host $topicHeadline -ForegroundColor Yellow
+    Write-Host "------------------------------"
+    $hasAssignment = Get-GroupAssignments -groupId $groupId -uri $uri -type $type -uriAssignment $uriAssignment
+    if(-not $hasAssignment) {Write-Host "No Assignment" -ForegroundColor green}
+    Write-Host "------------------------------"
 }
 
 function Get-GroupAssignments{
@@ -147,11 +107,11 @@ function Get-GroupAssignments{
         $type
         )
     #Device Configuration
-    $configurations = (Get-GraphCall -apiUri "$uri/$type" -method "GET").value 
+    $configurations = (Get-GraphCallCustom -endpoint "$uri/$type")
     $hasAssignment = $false
     
     foreach ($configuration in $configurations){
-        $assignmentsInfo = (Get-GraphCall -apiUri ("$uri/$type/" + $configuration.id + "/$uriAssignment") -method "GET")
+        $assignmentsInfo = (Get-GraphCallCustom -endpoint ("$uri/$type/" + $configuration.id + "/$uriAssignment") -value $false)
 
         if($uriAssignment -eq "groupAssignments"){$assignments = $assignmentsInfo.value}
         elseif($uriAssignment -eq "assignments"){$assignments = $assignmentsInfo.value.target }
@@ -186,6 +146,21 @@ function Get-GroupAssignments{
     return $hasAssignment
 }
 
+#################################################################################################
+###################################### Install Modules###########################################
+#################################################################################################
+if (Get-Module -ListAvailable -Name Microsoft.Graph) {
+    Write-Information "Microsoft Graph already installed"
+} else {
+    try {
+        Install-Module -Name Microsoft.Graph -Scope CurrentUser -Repository PSGallery -Force 
+    }catch{
+        $_.message 
+        exit
+    }
+}
+Import-Module microsoft.graph.authentication  
+
 
 #########################################################################################################
 ############################################ Start ######################################################
@@ -193,80 +168,50 @@ function Get-GroupAssignments{
 $countListGroups = 20
 
 #Auth
-if(-not $global:authToken){
-    if($User -eq $null -or $User -eq ""){
-    $User = Read-Host -Prompt "Please specify your user principal name for Azure Authentication"
-    Write-Host
-    }
-    $global:authToken = Get-AuthToken -User $User
-}
+$graph = Connect-MgGraph
+$group = $null
 
 # Get an check aad group
-$aadGroupName = Read-Host "Enter the name of the AAD Group"
-$groups = Get-AllAadGroup
-$checkGroupName = Check-GroupName -groupName $aadGroupName -allGroups $groups
-
-
-if(-not $checkGroupName){
-    Write-Warning "Group $aadGroupName not found"
+while ($null -eq $group) {
     Write-Host "------------------------------"
-    Write-Host "Available Groups:" -ForegroundColor Yellow
-    Write-Host " -  All users"
-    Write-Host " -  All devices"
-
-    $i = 0
-    foreach ($group in $groups) {
-        Write-Host " - " $group.displayName
-        $i++
-        if($i -gt $countListGroups -or $i -gt 100){
-            Write-Warning "Open the Azure Ad Portal to see all group: https://portal.azure.com/#view/Microsoft_AAD_IAM/GroupsManagementMenuBlade/~/AllGroups"
-            break
-        }
-    }
+    $aadGroupName = Read-Host "Enter the name of the AAD Group "
+    $group = Get-GroupPerName -groupName $aadGroupName
+    if($null -eq $group) {Write-Host "Group not found. Try again" -ForegroundColor Red}
+    if($null -eq $group) {Write-Host "Open the Azure AD Portal to see all group: https://portal.azure.com/#view/Microsoft_AAD_IAM/GroupsManagementMenuBlade/~/AllGroups" -ForegroundColor Red}
     Write-Host "------------------------------"
-    while(-not $checkGroupName)
-    {
-        $aadGroupName = Read-Host "Enter the name of the AAD Group"
-        $checkGroupName = Check-GroupName -groupName $aadGroupName -allGroups $groups
-    }
 }
+
 Write-Host "------------------------------"
-$groupId = Get-GroupId -groupName $aadGroupName -allGroups $groups
-Write-Host "Group name:" $aadGroupName -ForegroundColor Yellow
-Write-Host "Group Id:" $groupId -ForegroundColor Yellow
+Write-Host "Group Info" -ForegroundColor Yellow
+Write-Host "------------------------------"
+Write-Entry -topic "Group name" -value $group.displayName
+Write-Entry -topic "Group Id" -value $group.id
+Write-Entry -topic "Created" -value $group.createdDateTime
 Write-Host "------------------------------"
 
 # Device Configuration
-Write-Host "Device Configuration" -ForegroundColor Yellow
-Write-Host "------------------------------"
-$hasAssignment = Get-GroupAssignments -groupId $groupId -uri "deviceManagement" -type "deviceConfigurations" -uriAssignment "groupAssignments"
-if(-not $hasAssignment) {Write-Host "No Assignment" -ForegroundColor green}
-Write-Host "------------------------------"
+Get-Topic -topicHeadline "Device Configuration" -groupId $group.id -uri "deviceManagement" -type "deviceConfigurations" -uriAssignment "groupAssignments"
 
 # Administrative templates
-Write-Host "Administrative Templates" -ForegroundColor Yellow
-Write-Host "------------------------------"
-$hasAssignment = Get-GroupAssignments -groupId $groupId -uri "deviceManagement" -type "groupPolicyConfigurations" -uriAssignment "assignments"
-if(-not $hasAssignment) {Write-Host "No Assignment" -ForegroundColor green}
-Write-Host "------------------------------"
+Get-Topic -topicHeadline "Administrative Templates" -groupId $group.id -uri "deviceManagement" -type "groupPolicyConfigurations" -uriAssignment "assignments"
 
 # Device Compliance Policies
-Write-Host "Device Compliance Policies" -ForegroundColor Yellow
-Write-Host "------------------------------"
-$hasAssignment = Get-GroupAssignments -groupId $groupId -uri "deviceManagement" -type "deviceCompliancePolicies" -uriAssignment "assignments"
-if(-not $hasAssignment) {Write-Host "No Assignment" -ForegroundColor green}
-Write-Host "------------------------------"
+Get-Topic -topicHeadline "Device Compliance Policies" -groupId $group.id -uri "deviceManagement" -type "deviceCompliancePolicies" -uriAssignment "assignments"
 
 # Apps
-Write-Host "Mobile Applications" -ForegroundColor Yellow
-Write-Host "------------------------------"
-$hasAssignment = Get-GroupAssignments -groupId $groupId -uri "deviceappmanagement" -type "mobileApps" -uriAssignment "assignments"
-if(-not $hasAssignment) {Write-Host "No Assignment" -ForegroundColor green}
-Write-Host "------------------------------"
+Get-Topic -topicHeadline "Apps" -groupId $group.id -uri "deviceAppManagement" -type "mobileApps" -uriAssignment "assignments"
 
 # Scripts
-Write-Host "Scripts" -ForegroundColor Yellow
-Write-Host "------------------------------"
-$hasAssignment = Get-GroupAssignments -groupId $groupId -uri "deviceManagement" -type "deviceManagementScripts" -uriAssignment "assignments"
-if(-not $hasAssignment) {Write-Host "No Assignment" -ForegroundColor green}
-Write-Host "------------------------------"
+Get-Topic -topicHeadline "Scripts" -groupId $group.id -uri "deviceManagement" -type "deviceManagementScripts" -uriAssignment "assignments"
+
+# Remediation Scripts
+Get-Topic -topicHeadline "Remediation Scripts" -groupId $group.id -uri "deviceManagement" -type "deviceHealthScripts" -uriAssignment "assignments"
+
+# Autopilot profile
+Get-Topic -topicHeadline "Windows Autopilot deployment profiles" -groupId $group.id -uri "deviceManagement" -type "windowsAutopilotDeploymentProfiles" -uriAssignment "assignments"
+
+# Enrollment Status Page
+Get-Topic -topicHeadline "Enrollment Status Page" -groupId $group.id -uri "deviceManagement" -type "deviceEnrollmentConfigurations" -uriAssignment "assignments"
+
+# Security baselines
+Get-Topic -topicHeadline "Security baselines" -groupId $group.id -uri "deviceManagement" -type "intents" -uriAssignment "assignments"
