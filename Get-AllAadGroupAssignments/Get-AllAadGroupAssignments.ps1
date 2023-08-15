@@ -32,6 +32,7 @@
   Version 1.0: Init
   Version 2.0: Rewrite
   Version 2.1: Generalization
+  Version 2.2: Add Graph scope
 #> 
 Param()
 
@@ -167,7 +168,7 @@ Import-Module microsoft.graph.authentication
 #########################################################################################################
 
 #Auth
-$graph = Connect-MgGraph
+$graph = Connect-MgGraph -Scopes DeviceManagementConfiguration.Read.All, DeviceManagementApps.ReadWrite.All
 $group = $null
 
 # Get an check aad group
