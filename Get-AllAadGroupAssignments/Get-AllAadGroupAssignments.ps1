@@ -1,6 +1,6 @@
 
 <#PSScriptInfo
-.VERSION 2.1
+.VERSION 2.2
 .GUID a74f64cf-dbd4-45fe-a8f4-c43e23394d45
 .AUTHOR Jannik Reinhard
 .COMPANYNAME
