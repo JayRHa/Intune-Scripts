@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.8.1
+.VERSION 1.8.2
 .GUID 566b21e4-6fd1-457a-bdf0-7e082a7fb5c8
 .AUTHOR Jannik Reinhard
 .COMPANYNAME
@@ -35,6 +35,8 @@
   Version 1.6: Bug fix time.windows.com
   Version 1.7: Init + Add dynamic endpoint list from ms in addition
   Version 1.8: Improve endpoint testing and test ntp
+  Version 1.8.1: Bug fixes
+  Version 1.8.2: Bug fixes
 
 #> 
 $ProgressPreference = "SilentlyContinue"
@@ -126,10 +128,10 @@ function Get-OtherConnectionsTested {
         #$msEndpoints += $_.Replace("*.", "")
         $msEndpoints += $_
     }
-    $msEndpoints = $msEndpoints | Where-Object {$_ -notmatch "\*." -and $_ -notin $connections}    
-    Write-Host -ForegroundColor blue "Check all other connections (Not all for windows enrollment necessary) (443):"
-
+    $msEndpoints = $msEndpoints | Where-Object {-not ($_ -eq 'time.windows.com' -or $_ -eq 'emdl.ws.microsoft.com')} | Where-Object {$_ -notmatch "\*." -and $_ -notin $connections}    
+    Write-Host -ForegroundColor blue "Check all other connections from the MS Endpoint feed (Not all for windows enrollment necessary) (443):"
     $msEndpoints | ForEach-Object {
+
         $result = (Test-NetConnection -Port 443 -ComputerName $_)    
         Write-Host -NoNewline "  Other Connections: $($result.ComputerName) ($($result.RemoteAddress)): "
         if($result.TcpTestSucceeded) {
@@ -229,7 +231,7 @@ $connections443 = @(
     [pscustomobject]@{uri='activation-v2.sls.microsoft.com';Area='License activation'},
     [pscustomobject]@{uri='activation.sls.microsoft.com';Area='License activation'},
 
-    [pscustomobject]@{uri='emdl.ws.microsoft.com';Area='Windows Update'},
+    #[pscustomobject]@{uri='emdl.ws.microsoft.com';Area='Windows Update'},
     [pscustomobject]@{uri='dl.delivery.mp.microsoft.com';Area='Windows Update'},
     [pscustomobject]@{uri='update.microsoft.com';Area='Windows Update'},
     [pscustomobject]@{uri='fe2cr.update.microsoft.com';Area='Windows Update'},
@@ -261,7 +263,7 @@ $connections443 = @(
 )
 
 $connections80 = @(
-    [pscustomobject]@{uri='emdl.ws.microsoft.com';Area='Windows Update'},
+   # [pscustomobject]@{uri='emdl.ws.microsoft.com';Area='Windows Update'},
     [pscustomobject]@{uri='dl.delivery.mp.microsoft.com';Area='Windows Update'}
 )
 
