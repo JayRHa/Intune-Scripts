@@ -34,7 +34,7 @@ foreach ($device in $devices) {
         Write-Host "No primary user found for device $($device.deviceName)"
         continue
     }
-    Write-Host "Remove primary user $($device.primaryUser) from device $($device.deviceName)"
+    Write-Host "Remove primary user $($device.userId) from device $($device.deviceName)"
     #Remove primary user from device
-    Invoke-MgGraphRequest -Uri "deviceManagement/managedDevices/$($device.id)/users/$($device.primaryUser.id)/`$ref" -Method Delete
+    Invoke-MgGraphRequest -Uri "deviceManagement/managedDevices/$($device.id)/users/$($device.userId)/`$ref" -Method Delete
 }
