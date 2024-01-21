@@ -23,7 +23,7 @@ if ($module -eq $null) {
 }
 
 # Authentication
-Connect-MgGraph
+Connect-MgGraph -Scopes "DeviceManagementManagedDevices.ReadWrite.All"
 
 # Get all Windows devices
 $devices = Get-MgDeviceManagementManagedDevice -all -Filter $filter # You can adapt this filter also to select a other device group
@@ -36,5 +36,5 @@ foreach ($device in $devices) {
     }
     Write-Host "Remove primary user $($device.userId) from device $($device.deviceName)"
     #Remove primary user from device
-    Invoke-MgGraphRequest -Uri "deviceManagement/managedDevices/$($device.id)/users/$($device.userId)/`$ref" -Method Delete
+    Invoke-MgGraphRequest -Uri "beta/deviceManagement/managedDevices('$($device.id)')/users/`$ref" -Method Delete
 }
