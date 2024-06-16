@@ -1,0 +1,38 @@
+import os
+from openai import AzureOpenAI
+
+openai_azure_endpoint = "https://NAMEOFYOURDEPLOYMENT.openai.azure.com/"
+openai_key ="YOUR API KEY" # os.getenv(OPENAIKEY)
+
+
+file_path = os.path.join('C:\\', 'ProgramData', 'Microsoft', 'IntuneManagementExtension', 'Logs', 'IntuneManagementExtension.log')
+with open(file_path, 'r') as file:
+    log_content = file.read()
+
+prompt = f"""
+You are an senior intune engineer. Your task is to find errors in the [Intune Management Extension log]. Give the user a summary of the log an point him to errors on an structured way. Explain to the user what is mean and how he can check and troubleshoot this.
+
+[Intune Management Extension log]
+{log_content}
+[END Intune Management Extension log]
+"""
+
+client = AzureOpenAI(
+    azure_endpoint=openai_azure_endpoint,
+    api_key=openai_key,
+    api_version="2024-02-01",
+)
+      
+completion = client.chat.completions.create(
+    model="gpt-4o",
+    temperature=0,
+    messages=[
+        {
+            "role": "user",
+            "content": prompt,
+        }
+    ]
+)
+
+print(completion.choices[0].message.content)
+
