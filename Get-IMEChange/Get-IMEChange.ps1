@@ -5,7 +5,10 @@ Script: Get-IMEChange
 Description:
 Get information if a new version of IME changed the default IME.
 Release notes:
-Version 1.0: Init
+Version:
+- 1.0: Init
+- 1.1: Support multiple path
+
 #>
 # Create C:\temp directory if it doesn't exist
 If (-not (Test-Path C:\temp)) {
@@ -19,15 +22,31 @@ If (-not (Test-Path C:\temp\IMEChangeChecker)) {
 # Save the provided script in C:\temp
 $scriptContent = @'
 # Environment
-$path = "C:\Program Files (x86)\Microsoft Intune Management Extension\*"
-$type = @("*.dll", "*.exe")  # Use an array to specify multiple extensions
+$paths = @("C:\Program Files (x86)\Microsoft Intune Management Extension\")
+$types = @("*.dll", "*.exe")
 
 # Specify the path for the JSON file
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $jsonFilePath = Join-Path -Path $scriptDir -ChildPath "IMEChange.json"
 
-# Get the files
-$files = Get-ChildItem -Path $path -Include $type
+# Function to get files from multiple directories and types
+function Get-FilesFromPaths {
+    param (
+        [array]$paths,
+        [array]$types
+    )
+
+    $allFiles = @()
+
+    foreach ($path in $paths) {
+        foreach ($type in $types) {
+            $files = Get-ChildItem -Path $path -Include $type -Recurse -ErrorAction SilentlyContinue
+            $allFiles += $files
+        }
+    }
+
+    return $allFiles
+}
 
 # Function to compare two JSON files
 function Compare-JsonFiles {
@@ -45,6 +64,9 @@ function Compare-JsonFiles {
 
   return $jsonString1 -eq $jsonString2
 }
+
+# Get all the files from specified paths and types
+$files = Get-FilesFromPaths -paths $paths -types $types
 
 # Calculate the current file information
 $currentJson = $files | ForEach-Object {
@@ -69,7 +91,7 @@ if (Test-Path -Path $jsonFilePath) {
     $changedFilesListPath = Join-Path -Path $PSScriptRoot -ChildPath "ChangedFiles.html"
     $previousJson = Get-Content -Path $jsonFilePath | ConvertFrom-Json
 
-    $changedFiles = Compare-Object -ReferenceObject $previousJson -DifferenceObject $($currentJson | ConvertFrom-Json) -Property Hash | Where-Object { $_.SideIndicator -eq '=>' } 
+    $changedFiles = Compare-Object -ReferenceObject $previousJson -DifferenceObject $($currentJson | ConvertFrom-Json) -Property Hash | Where-Object { $_.SideIndicator -eq '=>' }
     $changedFiles = $($currentJson | ConvertFrom-Json) | Where-Object { $changedFiles.Hash -contains $_.Hash }
 
     # Styling for the HTML table
