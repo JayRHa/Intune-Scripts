@@ -1,21 +1,32 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Create-AzureAdTestGroups
-Description:
-Get all intune assignments from an aad group
-Release notes:
-Version 1.0: Init
-#> 
+.SYNOPSIS
+    Create test security groups in Entra ID (Azure AD)
+.DESCRIPTION
+    Connects to Microsoft Graph and creates a specified number of test security groups.
+    Uses the Microsoft Graph PowerShell SDK (Connect-MgGraph / New-MgGroup) instead of
+    the deprecated AzureAD module.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 2.0
+#>
 
-Connect-AzureAD
+try {
+    Connect-MgGraph -Scopes "Group.ReadWrite.All" -ErrorAction Stop
 
-$countOfTestGroups = 10
+    $countOfTestGroups = 10
 
-while($i -lt $countOfTestGroups)
-    {
-        New-AzureADGroup -DisplayName "zTestSecurityGroup$i" -SecurityEnabled $true -Description "Test group nr group $i"  -MailEnabled $false -MailNickName "NotSet"
-        $i++
+    for ($i = 0; $i -lt $countOfTestGroups; $i++) {
+        New-MgGroup -DisplayName "zTestSecurityGroup$i" `
+                    -SecurityEnabled `
+                    -Description "Test group nr group $i" `
+                    -MailEnabled:$false `
+                    -MailNickname "NotSet" `
+                    -ErrorAction Stop
     }
 
-
+    Write-Host "Successfully created $countOfTestGroups test groups"
+    exit 0
+} catch {
+    Write-Error "Failed to create test groups: $_"
+    exit 1
+}

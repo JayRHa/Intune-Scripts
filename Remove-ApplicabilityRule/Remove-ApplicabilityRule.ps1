@@ -1,84 +1,33 @@
-
 <#PSScriptInfo
-.VERSION 1.0
-.GUID 289544d2-0171-41b3-8dd3-8b37ca2c92d6
-.AUTHOR Jannik Reinhard
-.COMPANYNAME
-.COPYRIGHT
-.TAGS
-.LICENSEURI
-.PROJECTURI https://github.com/JayRHa/Intune-Scripts/blob/main/Remove-ApplicabilityRule/Remove-ApplicabilityRule.ps1
-.ICONURI
-.EXTERNALMODULEDEPENDENCIES 
-.REQUIREDSCRIPTS
-.EXTERNALSCRIPTDEPENDENCIES
-.RELEASENOTES
-.PRIVATEDATA
-
-#>
-
-<# 
-
-.DESCRIPTION 
- Remove Applicability Rule via Graph 
-.INPUTS
- None required
-.OUTPUTS
- None
+.SYNOPSIS
+    Remove applicability rules from all Intune device configuration profiles.
+.DESCRIPTION
+    Connects to Microsoft Graph, enumerates all device configuration profiles,
+    and patches any profile that has an OS-edition or OS-version applicability
+    rule to remove that rule.
 .NOTES
- Author: Jannik Reinhard (jannikreinhard.com)
- Twitter: @jannik_reinhard
- Release notes:
-  Version 1.0: Init
-#> 
+    Author : Jannik Reinhard (jannikreinhard.com)
+    Version: 1.1
+    Release: v1.0 - Init
+             v1.1 - Bug fixes, code-quality improvements
+#>
 
 Param()
 
 
 function Get-GraphAuthentication{
-    $GraphPowershellModulePath = "$global:Path/Microsoft.Graph.psd1"
     if (-not (Get-Module -ListAvailable -Name 'Microsoft.Graph')) {
-  
-        if (-Not (Test-Path $GraphPowershelModulePath)) {
-            Write-Error "Microsoft.Graph.Intune.psd1 is not installed on the system check: https://docs.microsoft.com/en-us/powershell/microsoftgraph/installation?view=graph-powershell-1.0"
-            Return
-        }
-        else {
-            Import-Module "$GraphPowershellModulePath"
-            $Success = $?
-  
-            if (-not ($Success)) {
-                Write-Error "Microsoft.Graph.Intune.psd1 is not installed on the system check: https://docs.microsoft.com/en-us/powershell/microsoftgraph/installation?view=graph-powershell-1.0"
-                Return
-            }
-        }
+        Write-Error "Microsoft.Graph module is not installed. See: https://docs.microsoft.com/en-us/powershell/microsoftgraph/installation?view=graph-powershell-1.0"
+        return $false
     }
-  
-    try
-    { 
-        Import-Module -Name Microsoft.Graph.Intune -ErrorAction Stop
-    } 
-    catch
-    {
-        Write-Output "Module Microsoft.Graph.Intune was not found, try to installing in for the current user..."
-        Install-Module -Name Microsoft.Graph.Intune -Scope CurrentUser -Force
-        Import-Module Microsoft.Graph.Intune -Force
-    }
-  
+
     try {
       Connect-MgGraph -Scopes "User.Read.All","Group.ReadWrite.All","DeviceManagementApps.Read.All", "Device.Read.All", "DeviceManagementApps.ReadWrite.All"
     } catch {
       Write-Error "Failed to connect to MgGraph"
       return $false
     }
-    
-    try {
-      Connect-MSGraph -AdminConsent -ErrorAction Stop
-    } catch {
-      Write-Error "Failed to connect to MSGraph"
-      return $false
-    }
-    Select-MgProfile -Name "beta"
+
     return $true
   }
 #################################################################################################
@@ -86,18 +35,26 @@ function Get-GraphAuthentication{
 #################################################################################################
 Get-GraphAuthentication | Out-Null
 
-Get-MgDeviceManagementDeviceConfiguration | ForEach-Object {
-    if(-not ($_.DeviceManagementApplicabilityRuleOSEdition.RuleType -eq $null)){
+Get-MgDeviceManagementDeviceConfiguration -All | ForEach-Object {
+    if(-not ($null -eq $_.DeviceManagementApplicabilityRuleOSEdition.RuleType)){
       $bodyJson = '{ "deviceManagementApplicabilityRuleOsEdition": null}' | ConvertFrom-Json
       $bodyJson | Add-Member -NotePropertyName "@odata.type" -NotePropertyValue $_.AdditionalProperties.'@odata.type'
-      Write-host "Applicability rule deleted form: $($_.displayname) ($($_.id))"
-      Invoke-MgGraphRequest -Method PATCH -Uri ("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations/$($_.id)") -Body ($bodyJson  | ConvertTo-Json)
+      Write-Host "Applicability rule deleted from: $($_.displayname) ($($_.id))"
+      try {
+          Invoke-MgGraphRequest -Method PATCH -Uri ("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations/$($_.id)") -Body ($bodyJson  | ConvertTo-Json)
+      } catch {
+          Write-Error "Failed to patch OS edition rule for $($_.displayname): $_"
+      }
 
     }
-    if(-not ($_.DeviceManagementApplicabilityRuleOSVersion.RuleType -eq $null)){
+    if(-not ($null -eq $_.DeviceManagementApplicabilityRuleOSVersion.RuleType)){
       $bodyJson = '{"deviceManagementApplicabilityRuleOsVersion" : null }' | ConvertFrom-Json
       $bodyJson | Add-Member -NotePropertyName "@odata.type" -NotePropertyValue $_.AdditionalProperties.'@odata.type'
-      Write-host "Applicability rule deleted form: $($_.displayname) ($($_.id))"
-      Invoke-MgGraphRequest -Method PATCH -Uri ("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations/$($_.id)") -Body ($bodyJson  | ConvertTo-Json)
+      Write-Host "Applicability rule deleted from: $($_.displayname) ($($_.id))"
+      try {
+          Invoke-MgGraphRequest -Method PATCH -Uri ("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations/$($_.id)") -Body ($bodyJson  | ConvertTo-Json)
+      } catch {
+          Write-Error "Failed to patch OS version rule for $($_.displayname): $_"
+      }
     }
 }

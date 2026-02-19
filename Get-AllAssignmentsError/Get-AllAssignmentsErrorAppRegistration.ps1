@@ -1,19 +1,22 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Get-AllErrorAssignments
-Description:
-Get all failed assignment in the tenant as csv
-Release notes:
-Version 1.0: Init
-#> 
+.SYNOPSIS
+    Get all failed Intune assignments and send report via email
+.DESCRIPTION
+    Retrieves all failed configuration profile and app assignments in the tenant,
+    exports them as CSV files, and sends an email report with attachments via Microsoft Graph.
+    Designed for Azure Automation with app registration authentication.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 1.0
+#>
+
 Function Get-AuthHeader{
     param (
         [parameter(Mandatory=$true)]$tenantId,
         [parameter(Mandatory=$true)]$clientId,
         [parameter(Mandatory=$true)]$clientSecret
        )
-    
+
     $authBody=@{
         client_id=$clientId
         client_secret=$clientSecret
@@ -30,7 +33,7 @@ Function Get-AuthHeader{
         'Authorization'="Bearer " + $accessToken.access_token
         'ExpiresOn'=$accessToken.expires_in
     }
-    
+
     return $authHeader
 }
 
@@ -39,7 +42,12 @@ function Get-GraphCall {
         [Parameter(Mandatory)]
         $url
     )
-    return Invoke-RestMethod -Uri https://graph.microsoft.com/beta/$url -Headers $authToken -Method GET
+    try {
+        return Invoke-RestMethod -Uri https://graph.microsoft.com/beta/$url -Headers $authToken -Method GET
+    } catch {
+        Write-Error "Graph API call failed: $_"
+        return $null
+    }
 }
 
 
@@ -47,7 +55,7 @@ function Get-FailedConfigAssignments{
     param(
         [Parameter(Mandatory)]
         $configProfileId
-    ) 
+    )
     $result = (Get-GraphCall -url ("deviceManagement/deviceConfigurations/$configProfileId/deviceStatuses?" + '$filter=(platform%20eq%200)')).value
     return $result | Where-Object {$_.status -eq 'error'} | Select-Object deviceDisplayName, userPrincipalName, status, lastReportedDateTime
 }
@@ -56,10 +64,9 @@ function Get-FailedAppAssignments{
     param(
         [Parameter(Mandatory)]
         $appId
-    ) 
+    )
     $result = (Get-GraphCall -url "deviceAppManagement/mobileApps/$appId/deviceStatuses").value
-    return $result | Select-Object deviceName, userPrincipalName, installState, lastSyncDateTime | Where-Object {($_.installState -ne 'installed
-')}
+    return $result | Select-Object deviceName, userPrincipalName, installState, lastSyncDateTime | Where-Object {($_.installState -ne 'installed')}
 }
 
 #################################################################################################
@@ -68,6 +75,11 @@ function Get-FailedAppAssignments{
 # Variables
 $MailSender = "mail@abc.onmicrosoft.com"
 $MailTo = "mail@abc.onmicrosoft.com"
+
+if ([string]::IsNullOrEmpty($MailSender) -or [string]::IsNullOrEmpty($MailTo)) {
+    Write-Error "Please configure MailSender and MailTo email addresses"
+    return
+}
 
 # Automation Secrets
 $tenantId = Get-AutomationVariable -Name 'TenantId'
@@ -107,7 +119,7 @@ $appsObject | Export-Csv -Path .\appInstallationErrors.csv -NoTypeInformation
 $configProfiles_csv = [Convert]::ToBase64String([IO.File]::ReadAllBytes(".\configProfileErrors.csv"))
 $appsObject_csv = [Convert]::ToBase64String([IO.File]::ReadAllBytes(".\appInstallationErrors.csv"))
 
-#Send Mail    
+#Send Mail
 $URLsend = "https://graph.microsoft.com/v1.0/users/$MailSender/sendMail"
 $BodyJsonsend = @"
 {
@@ -115,7 +127,7 @@ $BodyJsonsend = @"
       "subject": "Intune error report",
       "body": {
         "contentType": "Text",
-        "content": "Dear Admin, this Mail contains the error report from Intunn"
+        "content": "Dear Admin, this Mail contains the error report from Intune"
       },
       "toRecipients": [
         {
@@ -143,4 +155,8 @@ $BodyJsonsend = @"
 "@
 
 
-Invoke-RestMethod -Method POST -Uri $URLsend -Headers $global:authToken -Body $BodyJsonsend
+try {
+    Invoke-RestMethod -Method POST -Uri $URLsend -Headers $global:authToken -Body $BodyJsonsend
+} catch {
+    Write-Error "Failed to send email report: $_"
+}

@@ -1,51 +1,21 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Get-GraphExportApiReport
-Description:
-Get an CSV Report from the Graph API
-Release notes:
-Version 1.0: Init
-#> 
-function Get-AuthToken {
-    [cmdletbinding()]
-    param
-    (
-        [Parameter(Mandatory=$true)]
-        $User
-    )
+.SYNOPSIS
+    Export an Intune report to CSV via the Graph Export API.
+.DESCRIPTION
+    Submits an export job for the specified report name, polls until complete,
+    downloads the resulting ZIP and extracts it locally.
+.NOTES
+    Author : Jannik Reinhard
+    Version: 1.1
+#>
 
-    $userUpn = New-Object "System.Net.Mail.MailAddress" -ArgumentList $User
-    $tenant = $userUpn.Host
-    $AadModule = Get-Module -Name "AzureAD" -ListAvailable
-    if ($AadModule -eq $null) {
-        Write-Host "AzureAD PowerShell module not found, looking for AzureADPreview"
-        $AadModule = Get-Module -Name "AzureADPreview" -ListAvailable
+#Requires -Modules Microsoft.Graph.Authentication
+
+function Connect-MgGraphIfNeeded {
+    $context = Get-MgContext
+    if (-not $context) {
+        Connect-MgGraph -Scopes "DeviceManagementConfiguration.Read.All" -NoWelcome
     }
-
-    $adal = Join-Path $AadModule.ModuleBase "Microsoft.IdentityModel.Clients.ActiveDirectory.dll"
-    $adalforms = Join-Path $AadModule.ModuleBase "Microsoft.IdentityModel.Clients.ActiveDirectory.Platform.dll"
-
-    Add-Type -Path $adal
-    Add-Type -Path $adalforms
-    $clientId = "d1ddf0e4-d672-4dae-b554-9d5bdfd93547"
-    $redirectUri = "urn:ietf:wg:oauth:2.0:oob"
-    $resourceAppIdURI = "https://graph.microsoft.com"
-    $authority = "https://login.microsoftonline.com/$Tenant"
-
-    $authContext = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext" -ArgumentList $authority
-    $platformParameters = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.PlatformParameters" -ArgumentList "Auto"
-    $userId = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier" -ArgumentList ($User, "OptionalDisplayableId")
-    $authResult = $authContext.AcquireTokenAsync($resourceAppIdURI,$clientId,$redirectUri,$platformParameters,$userId).Result
-
-      
-    $authHeader = @{
-        'Content-Type'='application/json'
-        'Authorization'="Bearer " + $authResult.AccessToken
-        'ExpiresOn'=$authResult.ExpiresOn
-        }
-
-    return $authHeader
 }
 
 #################################################################################################
@@ -53,36 +23,44 @@ function Get-AuthToken {
 #################################################################################################
 $reportName = 'DetectedAppsRawData'
 
-
-#Get auth toke
-if(-not $global:authToken.Authorization){
-    if($User -eq $null -or $User -eq ""){
-    $User = Read-Host -Prompt "Please specify your user principal name for Azure Authentication"
-    Write-Host
-    }
-    $global:authToken = Get-AuthToken -User $User
-}
+# Auth
+Connect-MgGraphIfNeeded
 
 $body = @"
-{ 
-    "reportName": "$reportName", 
+{
+    "reportName": "$reportName",
     "localizationType": "LocalizedValuesAsAdditionalColumn"
-} 
+}
 "@
 
+try {
+    $id = (Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs" -Method POST -Body $body -ContentType "application/json").id
+    $iteration = 0
+    $maxIterations = 60
+    $status = $null
 
-$id = (Invoke-RestMethod -Uri https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs -Headers $authToken -Method POST -Body $body).id
-$status = (Invoke-RestMethod -Uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs('$id')" -Headers $authToken -Method GET).status
+    do {
+        $response = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs('$id')" -Method GET
+        $status = $response.status
+        if ($status -ne 'completed') {
+            Start-Sleep -Seconds 2
+            $iteration++
+        }
+    } while ($status -ne 'completed' -and $iteration -lt $maxIterations)
 
-while (-not ($status -eq 'completed')) {
-    $response = Invoke-RestMethod -Uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs('$id')" -Headers $authToken -Method Get
-    $status = ($response).status
-    Start-Sleep -Seconds 2
+    if ($status -ne 'completed') {
+        Write-Error "Export job timed out after $maxIterations polling attempts."
+        return
+    }
+
+    Invoke-WebRequest -Uri $response.url -OutFile "./intuneExport.zip"
+    Expand-Archive "./intuneExport.zip" -DestinationPath "./intuneExport"
+}
+catch {
+    Write-Error "Failed to export report: $_"
+    throw
 }
 
-Invoke-WebRequest -Uri $response.url -OutFile "./intuneExport.zip"
-Expand-Archive "./intuneExport.zip" -DestinationPath "./intuneExport" 
-
-## Copy the file to an storage or do some actions
+## Copy the file to storage or do some actions
 ########
 ########

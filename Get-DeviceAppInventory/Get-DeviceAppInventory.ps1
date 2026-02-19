@@ -1,11 +1,16 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Get-DeviceAppInventory
-Description:
-Write all discovered app in an log analytics workspace
-Release notes:
-Version 1.0: Init
+.SYNOPSIS
+    Export discovered apps from Intune to a Log Analytics workspace.
+.DESCRIPTION
+    Connects to Microsoft Graph, enumerates all managed devices and their
+    detected applications, then sends each app record as JSON to the Azure
+    Monitor HTTP Data Collector API.
+.NOTES
+    Author : Jannik Reinhard (jannikreinhard.com)
+    Version: 1.1
+    Release: v1.0 - Init
+             v1.1 - Removed deprecated Select-MgProfile, fixed Get-GraphAuthentication,
+                     renamed Send-LogAnalyticsData, added guards and try/catch
 #>
 
 ################################################################################################################
@@ -15,34 +20,24 @@ $customerId = "" # Add Workspace ID
 $sharedKey = "" # Add Primary key
 $logType = "DiscoveredApps"
 
+if ([string]::IsNullOrEmpty($customerId) -or [string]::IsNullOrEmpty($sharedKey)) {
+    Write-Error "Log Analytics credentials are not configured. Set `$customerId and `$sharedKey before running."
+    exit 1
+}
+
 function Get-GraphAuthentication{
-    $GraphPowershellModulePath = "$global:Path/Microsoft.Graph.psd1"
     if (-not (Get-Module -ListAvailable -Name 'Microsoft.Graph')) {
-  
-        if (-Not (Test-Path $GraphPowershellModulePath)) {
-            Write-Error "Microsoft.Graph.Intune.psd1 is not installed on the system check: https://docs.microsoft.com/en-us/powershell/microsoftgraph/installation?view=graph-powershell-1.0"
-            Return
-        }
-        else {
-            Import-Module "$GraphPowershellModulePath"
-            $Success = $?
-  
-            if (-not ($Success)) {
-                Write-Error "Microsoft.Graph.Intune.psd1 is not installed on the system check: https://docs.microsoft.com/en-us/powershell/microsoftgraph/installation?view=graph-powershell-1.0"
-                Return
-            }
-        }
+        Write-Error "Microsoft.Graph module is not installed. Install via: Install-Module Microsoft.Graph -Scope CurrentUser"
+        return $false
     }
-  
 
     try {
       Connect-MgGraph -Scopes "Device.Read.All"
     } catch {
-      Write-Error "Failed to connect to MgGraph"
+      Write-Error "Failed to connect to MgGraph: $_"
       return $false
     }
-    
-    Select-MgProfile -Name "beta"
+
     return $true
 }
 
@@ -62,7 +57,7 @@ Function Build-Signature ($customerId, $sharedKey, $date, $contentLength, $metho
     return $authorization
 }
 
-Function Post-LogAnalyticsData($f_customerId, $f_sharedKey, $f_body, $f_logType)
+Function Send-LogAnalyticsData($f_customerId, $f_sharedKey, $f_body, $f_logType)
 {
     $method = "POST"
     $contentType = "application/json"
@@ -96,24 +91,30 @@ Function Post-LogAnalyticsData($f_customerId, $f_sharedKey, $f_body, $f_logType)
 
 Get-GraphAuthentication | Out-Null
 
-Get-MgDeviceManagementManagedDevice | ForEach-Object {
-    $deviceHostname = $_.deviceName
-    $device = Get-MgDeviceManagementManagedDevice -Expand detectedApps -ManagedDeviceId $_.id
-    $device.detectedApps | ForEach-Object {
-        $properties = [Ordered] @{
-            "Hostname"      = $deviceHostname
-            "AppName"       = $_.DisplayName
-            "Version"       = $_.Version
-        }
+try {
+    Get-MgDeviceManagementManagedDevice | ForEach-Object {
+        $deviceHostname = $_.deviceName
+        $device = Get-MgDeviceManagementManagedDevice -Expand detectedApps -ManagedDeviceId $_.id
+        $device.detectedApps | ForEach-Object {
+            $properties = [Ordered] @{
+                "Hostname"      = $deviceHostname
+                "AppName"       = $_.DisplayName
+                "Version"       = $_.Version
+            }
 
-        $sdeviceAppInventory = (New-Object -TypeName "PSObject" -Property $properties) | ConvertTo-Json
+            $sdeviceAppInventory = (New-Object -TypeName "PSObject" -Property $properties) | ConvertTo-Json
 
-        $params = @{
-            f_customerId = $customerId
-            f_sharedKey  = $sharedKey
-            f_body       = ([System.Text.Encoding]::UTF8.GetBytes($sdeviceAppInventory))
-            f_logType    = $logType 
+            $params = @{
+                f_customerId = $customerId
+                f_sharedKey  = $sharedKey
+                f_body       = ([System.Text.Encoding]::UTF8.GetBytes($sdeviceAppInventory))
+                f_logType    = $logType
+            }
+            $logResponse = Send-LogAnalyticsData @params
         }
-        $logResponse = Post-LogAnalyticsData @params
     }
+}
+catch {
+    Write-Error "Failed to process device app inventory: $_"
+    exit 1
 }

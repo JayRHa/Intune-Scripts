@@ -1,5 +1,5 @@
 <#PSScriptInfo
-.VERSION 1.8.2
+.VERSION 1.8.3
 .GUID 566b21e4-6fd1-457a-bdf0-7e082a7fb5c8
 .AUTHOR Jannik Reinhard
 .COMPANYNAME
@@ -8,42 +8,44 @@
 .LICENSEURI
 .PROJECTURI https://github.com/JayRHa/Intune-Scripts/tree/main/Check-AutopilotPrerequisites
 .ICONURI
-.EXTERNALMODULEDEPENDENCIES 
+.EXTERNALMODULEDEPENDENCIES
 .REQUIREDSCRIPTS
 .EXTERNALSCRIPTDEPENDENCIES
 .RELEASENOTES
 .PRIVATEDATA
 #>
 
-<# 
-.DESCRIPTION 
- Checking if all prerequisites are fullfiled befor starting the enrollment process 
+<#
+.SYNOPSIS
+    Check all Autopilot prerequisites before starting enrollment.
+.DESCRIPTION
+    Validates device info, network adapters, required endpoint connectivity
+    (ports 443 and 80), NTP reachability, and the Microsoft MEM endpoint feed.
 .INPUTS
- None required
+    None required
 .OUTPUTS
- None
+    None
 .NOTES
- Author: Jannik Reinhard (jannikreinhard.com)
- Twitter: @jannik_reinhard
- Release notes:
-  Version 1.0: Init
-  Version 1.1: Windows 10 Enterprise LTSC 
-  Version 1.2: Add TPM info
-  Version 1.3: Minor fixes
-  Version 1.4: Minor fixes
-  Version 1.5: Add Autopilot profile info and dhcp bug fix
-  Version 1.6: Bug fix time.windows.com
-  Version 1.7: Init + Add dynamic endpoint list from ms in addition
-  Version 1.8: Improve endpoint testing and test ntp
-  Version 1.8.1: Bug fixes
-  Version 1.8.2: Bug fixes
-
-#> 
+    Author : Jannik Reinhard (jannikreinhard.com)
+    Version: 1.8.3
+    Release: v1.0 - Init
+             v1.1 - Windows 10 Enterprise LTSC
+             v1.2 - Add TPM info
+             v1.3 - Minor fixes
+             v1.4 - Minor fixes
+             v1.5 - Add Autopilot profile info and dhcp bug fix
+             v1.6 - Bug fix time.windows.com
+             v1.7 - Init + Add dynamic endpoint list from ms in addition
+             v1.8 - Improve endpoint testing and test ntp
+             v1.8.1 - Bug fixes
+             v1.8.2 - Bug fixes
+             v1.8.3 - Replaced Get-WmiObject with Get-CimInstance, alias cleanup
+#>
 $ProgressPreference = "SilentlyContinue"
 function Get-NetworkInformation {
-    $networkAdapters = Get-WmiObject -Class Win32_NetworkAdapterConfiguration -namespace "root\CIMV2" -computername "." -Filter "IPEnabled = 'True' AND DHCPEnabled ='True'" 
-    foreach ($networkAdapter in $networkAdapters) 
-    {  
+    $networkAdapters = Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration -Namespace "root\CIMV2" -Filter "IPEnabled = 'True' AND DHCPEnabled ='True'"
+    foreach ($networkAdapter in $networkAdapters)
+    {
         Write-Host -ForegroundColor green "$($networkAdapter.Caption):"
 
         $ipAddress = ((Get-ItemProperty -Path ("HKLM:\SYSTEM\CurrentControlSet\services\Tcpip\Parameters\Interfaces\{0}" -f $networkAdapter.SettingID) -Name DhcpIPAddress).DhcpIPAddress)
@@ -57,14 +59,14 @@ function Get-ComputerInformation {
     $AutopilotCache = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Provisioning\AutopilotPolicyCache" -Name "PolicyJsonCache"
     $AutopilotCache = $AutopilotCache | ConvertFrom-Json
     $APProfileName = $AutopilotCache.DeploymentProfileName
-    $OSEdition = (Get-CimInstance win32_operatingsystem).Caption.Replace("Microsoft ","")
-    $computerInfo = get-computerinfo
-    $tpmInfo = get-tpm
-    
+    $OSEdition = (Get-CimInstance Win32_OperatingSystem).Caption.Replace("Microsoft ","")
+    $computerInfo = Get-ComputerInfo
+    $tpmInfo = Get-Tpm
+
     $windowsVersion = @(
         "Windows 10 Enterprise", "Windows 10 Education", "Windows 10 Pro for Workstations", "Windows 10 Pro Education", "Windows 10 Pro" ,"Windows 11 Enterprise", "Windows 11 Education", "Windows 11 Pro for Workstations", "Windows 11 Pro Education", "Windows 11 Pro"
     )
-    
+
     Write-Host -NoNewline "  Windows Edition :     "
     if($windowsVersion.Contains($($OSEdition))){
         Write-Host -ForegroundColor green $OSEdition
@@ -85,10 +87,10 @@ function Get-ComputerInformation {
     Write-Host "  Tpm enabled :         $($tpmInfo.TpmEnabled)"
     if (-not $AutopilotCache.DeploymentProfileName) {
         Write-Host "  Cached AP Profile :   Not Present"
-        
+
     }else{
-        Write-Host "  Cached AP Profile :   Assigned" 
-        Write-Host "  Autopilot Profile : $APProfileName"   
+        Write-Host "  Cached AP Profile :   Assigned"
+        Write-Host "  Autopilot Profile : $APProfileName"
     }
 
 }
@@ -97,7 +99,7 @@ function Get-ConnectionTest {
     param(
 		[Parameter(Mandatory)]
 		$connections,
-		
+
 		[Parameter(Mandatory)]
 		[int]$port
 	)
@@ -106,12 +108,17 @@ function Get-ConnectionTest {
     Write-Host -ForegroundColor blue "Test port $port :"
 
     $connections | ForEach-Object {
-        $result = (Test-NetConnection -Port $port -ComputerName $_.uri)    
-        Write-Host -NoNewline "  $($_.area): $($result.ComputerName) ($($result.RemoteAddress)): "
-        if($result.TcpTestSucceeded) {
-            Write-Host -ForegroundColor Green $result.TcpTestSucceeded
-        }else{
-            Write-Host -ForegroundColor Red $result.TcpTestSucceeded
+        try {
+            $result = (Test-NetConnection -Port $port -ComputerName $_.uri)
+            Write-Host -NoNewline "  $($_.area): $($result.ComputerName) ($($result.RemoteAddress)): "
+            if($result.TcpTestSucceeded) {
+                Write-Host -ForegroundColor Green $result.TcpTestSucceeded
+            }else{
+                Write-Host -ForegroundColor Red $result.TcpTestSucceeded
+            }
+        }
+        catch {
+            Write-Warning "  $($_.area): $($_.uri) - Connection test failed: $_"
         }
     }
     Write-Host
@@ -124,20 +131,30 @@ function Get-OtherConnectionsTested {
 	)
 
     $msEndpoints = @()
-    (invoke-restmethod -Uri ("https://endpoints.office.com/endpoints/WorldWide?ServiceAreas=MEM`&clientrequestid=" + ([GUID]::NewGuid()).Guid)) | ?{$_.ServiceArea -eq "MEM" -and $_.urls} | select -ExpandProperty urls | ForEach-Object {
-        #$msEndpoints += $_.Replace("*.", "")
-        $msEndpoints += $_
+    try {
+        (Invoke-RestMethod -Uri ("https://endpoints.office.com/endpoints/WorldWide?ServiceAreas=MEM`&clientrequestid=" + ([GUID]::NewGuid()).Guid)) | Where-Object { $_.ServiceArea -eq "MEM" -and $_.urls } | Select-Object -ExpandProperty urls | ForEach-Object {
+            $msEndpoints += $_
+        }
     }
-    $msEndpoints = $msEndpoints | Where-Object {-not ($_ -eq 'time.windows.com' -or $_ -eq 'emdl.ws.microsoft.com')} | Where-Object {$_ -notmatch "\*." -and $_ -notin $connections}    
+    catch {
+        Write-Warning "Failed to retrieve Microsoft MEM endpoint feed: $_"
+        return
+    }
+
+    $msEndpoints = $msEndpoints | Where-Object {-not ($_ -eq 'time.windows.com' -or $_ -eq 'emdl.ws.microsoft.com')} | Where-Object {$_ -notmatch "\*." -and $_ -notin $connections}
     Write-Host -ForegroundColor blue "Check all other connections from the MS Endpoint feed (Not all for windows enrollment necessary) (443):"
     $msEndpoints | ForEach-Object {
-
-        $result = (Test-NetConnection -Port 443 -ComputerName $_)    
-        Write-Host -NoNewline "  Other Connections: $($result.ComputerName) ($($result.RemoteAddress)): "
-        if($result.TcpTestSucceeded) {
-            Write-Host -ForegroundColor Green $result.TcpTestSucceeded
-        }else{
-            Write-Host -ForegroundColor Red $result.TcpTestSucceeded
+        try {
+            $result = (Test-NetConnection -Port 443 -ComputerName $_)
+            Write-Host -NoNewline "  Other Connections: $($result.ComputerName) ($($result.RemoteAddress)): "
+            if($result.TcpTestSucceeded) {
+                Write-Host -ForegroundColor Green $result.TcpTestSucceeded
+            }else{
+                Write-Host -ForegroundColor Red $result.TcpTestSucceeded
+            }
+        }
+        catch {
+            Write-Warning "  Connection test failed for $_ : $_"
         }
     }
     Write-Host
@@ -179,17 +196,22 @@ function Get-NtpTimeTested{
     Write-Host -ForegroundColor blue "Test NTP:"
     $timeserver = "time.windows.com"
     Write-Host -NoNewline "  TimeServier: $timeserver "
-    $timeserverip = (Resolve-DnsName -Name $timeserver -ErrorAction SilentlyContinue).IP4Address
-    if( $null -eq $timeserverip ) {
-        Write-Host -ForegroundColor Red ": False (not resolved)"
-    } else {
-        Write-Host -NoNewline "($timeserverip): "
-        $time = Get-NtpTime($timeserver)
-        if($null -ne $time){
-            Write-Host -ForegroundColor Green "True ($time)"
-        }else{
-            Write-Host -ForegroundColor Red ": False (Not Time response)"
+    try {
+        $timeserverip = (Resolve-DnsName -Name $timeserver -ErrorAction SilentlyContinue).IP4Address
+        if( $null -eq $timeserverip ) {
+            Write-Host -ForegroundColor Red ": False (not resolved)"
+        } else {
+            Write-Host -NoNewline "($timeserverip): "
+            $time = Get-NtpTime($timeserver)
+            if($null -ne $time){
+                Write-Host -ForegroundColor Green "True ($time)"
+            }else{
+                Write-Host -ForegroundColor Red ": False (Not Time response)"
+            }
         }
+    }
+    catch {
+        Write-Warning "NTP test failed: $_"
     }
 }
 
@@ -259,7 +281,7 @@ $connections443 = @(
     [pscustomobject]@{uri='settings-win.data.microsoft.com';Area='Update Compliance'},
     [pscustomobject]@{uri='adl.windows.com';Area='Update Compliance'},
     [pscustomobject]@{uri='watson.telemetry.microsoft.com';Area='Update Compliance'},
-    [pscustomobject]@{uri='oca.telemetry.microsoft.com';Area='Update Compliance'}       
+    [pscustomobject]@{uri='oca.telemetry.microsoft.com';Area='Update Compliance'}
 )
 
 $connections80 = @(

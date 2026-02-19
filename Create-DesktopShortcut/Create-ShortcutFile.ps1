@@ -1,16 +1,14 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Create-ShortcutFile
-Description:
-Create the Lnk shortcut file
-Release notes:
-Version 1.0: Init
-Version 1.1: Copy icon local
-#> 
+.SYNOPSIS
+    Create a web shortcut .lnk file
+.DESCRIPTION
+    Creates a desktop shortcut (.lnk) that opens a website in Microsoft Edge, including a custom icon.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 1.1
+#>
 
-
-function Create-WebShortcut {
+function New-WebShortcut {
     param (
         [Parameter(Mandatory)]
         [String] $Path,
@@ -20,9 +18,7 @@ function Create-WebShortcut {
         [String] $Icon
     )
 
-    #Edge
     $edgePath = "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"
-
 
     $WshShell = New-Object -comObject WScript.Shell
     $Shortcut = $WshShell.CreateShortcut($Path)
@@ -33,23 +29,24 @@ function Create-WebShortcut {
     [Runtime.InteropServices.Marshal]::ReleaseComObject($WshShell) | Out-Null
 }
 
-#Name of the shortcut
-$shortcutName = "Intranet Shortcut" 
-#Icon file best to use a website
+# Name of the shortcut
+$shortcutName = "Intranet Shortcut"
+# Icon file best to use a website
 $icon = "https://jannikreinhard.com/files/website.ico"
 $iconPath = "C:\ProgramData\WebpageShortcut\webPage.ico"
-#Link of the webseite
+# Link of the website
 $websiteUrl = "https://jannikreinhard.com/"
-#OutputFolder
+# Output folder
 $outputFolder = "C:\temp"
 
+try {
+    $path = Join-Path -Path $outputFolder -ChildPath "$shortcutName.lnk"
 
-
-$path = Join-Path -Path $outputFolder -ChildPath "$shortcutName.lnk"
-
-#Create shortcut
-Invoke-WebRequest -Uri $icon -OutFile "$outputFolder\webPage.ico"
-
-Create-WebShortcut -Path $path -WebsiteUrl $websiteUrl -Icon $iconPath
-
-
+    # Download icon and create shortcut
+    Invoke-WebRequest -Uri $icon -OutFile "$outputFolder\webPage.ico" -ErrorAction Stop
+    New-WebShortcut -Path $path -WebsiteUrl $websiteUrl -Icon $iconPath
+    exit 0
+} catch {
+    Write-Error "Failed to create shortcut file: $_"
+    exit 1
+}

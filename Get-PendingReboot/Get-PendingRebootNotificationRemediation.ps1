@@ -1,11 +1,12 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Get-PendingRebootNotificationRemediation
-Description:
-Remediation script to display toast notification for pending reboot
-Release notes:
-Version 1.0: Init
+.SYNOPSIS
+    Display toast notification for pending reboot
+.DESCRIPTION
+    Intune Proactive Remediation script that shows a Windows toast notification
+    prompting the user to reboot their system after updates have been installed.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 1.0
 #>
 
 function Register-NotificationApp {
@@ -54,11 +55,11 @@ function Register-NotificationApp {
         New-ItemProperty -Path $RegPath -Name IconBackgroundColor -Value $IconBackgroundColor -PropertyType ExpandString -Force | Out-Null
     }
     catch {
-        # Handle exceptions if needed
+        Write-Warning "Failed to register notification app: $_"
     }
 }
 
-function Create-Action {
+function New-ProtocolAction {
     param (
         [string]$ActionName
     )
@@ -67,10 +68,14 @@ function Create-Action {
     $CommandPath  = "$MainRegPath\shell\open\command"
     $CmdScript    = "C:\Users\Public\Documents\$ActionName.cmd"
 
-    New-Item -Path $CommandPath -Force
-    New-ItemProperty -Path $MainRegPath -Name "URL Protocol" -Value "" -PropertyType String -Force | Out-Null
-    Set-ItemProperty -Path $MainRegPath -Name "(Default)" -Value "URL:$ActionName Protocol" -Force | Out-Null
-    Set-ItemProperty -Path $CommandPath -Name "(Default)" -Value $CmdScript -Force | Out-Null
+    try {
+        New-Item -Path $CommandPath -Force
+        New-ItemProperty -Path $MainRegPath -Name "URL Protocol" -Value "" -PropertyType String -Force | Out-Null
+        Set-ItemProperty -Path $MainRegPath -Name "(Default)" -Value "URL:$ActionName Protocol" -Force | Out-Null
+        Set-ItemProperty -Path $CommandPath -Name "(Default)" -Value $CmdScript -Force | Out-Null
+    } catch {
+        Write-Warning "Failed to create protocol action '$ActionName': $_"
+    }
 }
 
 # Encode the image in base64: https://www.base64-image.de/
@@ -93,7 +98,7 @@ shutdown -r
 '@
 
 $ActionScriptCmdReboot | Out-File -FilePath "$ScriptExecutionPath\ActionReboot.cmd" -Force -Encoding ASCII
-Create-Action -ActionName "ActionReboot"
+New-ProtocolAction -ActionName "ActionReboot"
 
 ############################################## Notification #####################################################
 # Create PNG file from Base64 string

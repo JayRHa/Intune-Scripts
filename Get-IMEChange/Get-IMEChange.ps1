@@ -1,14 +1,15 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Get-IMEChange
-Description:
-Get information if a new version of IME changed the default IME.
-Release notes:
-Version:
-- 1.0: Init
-- 1.1: Support multiple path
-
+.SYNOPSIS
+    Detect changes to the Intune Management Extension (IME) binaries.
+.DESCRIPTION
+    Deploys a scheduled task that monitors IME DLL/EXE files for hash changes.
+    When a change is detected a toast notification is shown with an HTML report
+    listing the modified files.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 1.1
+    Release: v1.0 - Init
+             v1.1 - Support multiple paths
 #>
 # Create C:\temp directory if it doesn't exist
 If (-not (Test-Path C:\temp)) {

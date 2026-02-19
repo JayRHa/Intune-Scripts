@@ -1,57 +1,30 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Copy-DeviceConfigurationPolicy
-Description:
-Copy an configuration profile in intune. This script does not work with ADMX templates
-Release notes:
-Version 1.0: Init
-#> 
- 
+.SYNOPSIS
+    Copy an Intune device configuration profile
+.DESCRIPTION
+    Copy a device configuration profile in Intune. This script does not work with ADMX templates.
+    Uses Microsoft Graph API via the Microsoft.Graph.Authentication module.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 1.0
+#>
 
-function Get-AuthToken {
-    [cmdletbinding()]
-    param
-    (
-        [Parameter(Mandatory=$true)]
-        $User
-    )
+#Requires -Modules Microsoft.Graph.Authentication
 
-    $userUpn = New-Object "System.Net.Mail.MailAddress" -ArgumentList $User
-    $tenant = $userUpn.Host
-    $AadModule = Get-Module -Name "AzureAD" -ListAvailable
-    if ($AadModule -eq $null) {
-        Write-Host "AzureAD PowerShell module not found, looking for AzureADPreview"
-        $AadModule = Get-Module -Name "AzureADPreview" -ListAvailable
+function Connect-MgGraphIfNeeded {
+    $context = Get-MgContext
+    if (-not $context) {
+        Connect-MgGraph -Scopes "DeviceManagementConfiguration.ReadWrite.All" -NoWelcome
     }
-
-    $adal = Join-Path $AadModule.ModuleBase "Microsoft.IdentityModel.Clients.ActiveDirectory.dll"
-    $adalforms = Join-Path $AadModule.ModuleBase "Microsoft.IdentityModel.Clients.ActiveDirectory.Platform.dll"
-
-    [System.Reflection.Assembly]::LoadFrom($adal) | Out-Null
-    [System.Reflection.Assembly]::LoadFrom($adalforms) | Out-Null
-    $clientId = "d1ddf0e4-d672-4dae-b554-9d5bdfd93547"
-    $redirectUri = "urn:ietf:wg:oauth:2.0:oob"
-    $resourceAppIdURI = "https://graph.microsoft.com"
-    $authority = "https://login.microsoftonline.com/$Tenant"
-
-    $authContext = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext" -ArgumentList $authority
-    $platformParameters = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.PlatformParameters" -ArgumentList "Auto"
-    $userId = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier" -ArgumentList ($User, "OptionalDisplayableId")
-    $authResult = $authContext.AcquireTokenAsync($resourceAppIdURI,$clientId,$redirectUri,$platformParameters,$userId).Result
-
-      
-    $authHeader = @{
-        'Content-Type'='application/json'
-        'Authorization'="Bearer " + $authResult.AccessToken
-        'ExpiresOn'=$authResult.ExpiresOn
-        }
-
-    return $authHeader
-
 }
+
 function Get-ListOfProfiles {
-    $response = Invoke-RestMethod -Uri https://graph.microsoft.com/v1.0/deviceManagement/deviceConfigurations -Headers $authToken -Method GET
+    try {
+        $response = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/deviceManagement/deviceConfigurations" -Method GET
+    } catch {
+        Write-Error "Failed to retrieve configuration profiles: $_"
+        return
+    }
     $profiles = @()
     $nr = 1
     foreach ($profile in $response.value)
@@ -63,8 +36,8 @@ function Get-ListOfProfiles {
             description = $profile.description
             profile =$profile
         }
-        
-        $profiles += $objProfile 
+
+        $profiles += $objProfile
         $nr++
     }
     return $profiles
@@ -74,25 +47,23 @@ function Import-ConfigurationProfile {
              [Parameter(Mandatory)]
              $ConfigProfile
        )
-    
-    $profile = $ConfigProfile | Select-Object -Property * -ExcludeProperty id,createdDateTime,lastModifiedDateTime,version,supportsScopeTags
-    $profile = $ConfigProfile | ConvertTo-Json
-    Write-Host $profile
-    Invoke-RestMethod -Uri https://graph.microsoft.com/v1.0/deviceManagement/deviceConfigurations -Headers $authToken -Method Post -Body $profile -ContentType "application/json" 
+
+    $filteredProfile = $ConfigProfile | Select-Object -Property * -ExcludeProperty id,createdDateTime,lastModifiedDateTime,version,supportsScopeTags
+    $profileJson = $filteredProfile | ConvertTo-Json -Depth 10
+    Write-Host $profileJson
+    try {
+        Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/deviceManagement/deviceConfigurations" -Method POST -Body $profileJson -ContentType "application/json"
+    } catch {
+        Write-Error "Failed to import configuration profile: $_"
+    }
 }
 
 
 ##################################################
-#Get auth toke
-if(-not $global:authToken.Authorization){
-    if($User -eq $null -or $User -eq ""){
-    $User = Read-Host -Prompt "Please specify your user principal name for Azure Authentication"
-    Write-Host
-    }
-    $global:authToken = Get-AuthToken -User $User
-}
+#Get auth token
+Connect-MgGraphIfNeeded
 
-# Write all existing confi profiles
+# Write all existing config profiles
 $profiles = Get-ListOfProfiles
 Write-Host "++++++++++++++++++++++++++++++"
 Write-Host "+++++++Config Profiles++++++++"
@@ -102,9 +73,9 @@ Write-Host "++++++++++++++++++++++++++++++"
 
 
 $profileName = Read-Host "Enter the name of the profile you want to copy"
-$profileToBeCopied = ($profiles | where {$_.name -eq "$profileName"})[0]
+$profileToBeCopied = ($profiles | Where-Object {$_.name -eq "$profileName"})[0]
 
-if($profileToBeCopied -eq $null) {
+if($null -eq $profileToBeCopied) {
    Write-Host "Profile not found" -ForegroundColor Yellow
    return
 }

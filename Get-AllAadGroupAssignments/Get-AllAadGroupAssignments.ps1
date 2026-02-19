@@ -1,6 +1,6 @@
 
 <#PSScriptInfo
-.VERSION 2.2
+.VERSION 2.3
 .GUID a74f64cf-dbd4-45fe-a8f4-c43e23394d45
 .AUTHOR Jannik Reinhard
 .COMPANYNAME
@@ -9,7 +9,7 @@
 .LICENSEURI
 .PROJECTURI https://github.com/JayRHa/Intune-Scripts/blob/main/Get-AllAadGroupAssignments/Get-AllAadGroupAssignments.ps1
 .ICONURI
-.EXTERNALMODULEDEPENDENCIES 
+.EXTERNALMODULEDEPENDENCIES
 .REQUIREDSCRIPTS
 .EXTERNALSCRIPTDEPENDENCIES
 .RELEASENOTES
@@ -17,23 +17,27 @@
 
 #>
 
-<# 
-
-.DESCRIPTION 
- Get all intune assignments from an aad group
+<#
+.SYNOPSIS
+    Show all Intune assignments for a given Azure AD group.
+.DESCRIPTION
+    Connects to Microsoft Graph and enumerates device configurations,
+    administrative templates, compliance policies, apps, scripts,
+    remediation scripts, Autopilot profiles, ESP, and security baselines
+    to display which are assigned (included/excluded) for a specified group.
 .INPUTS
- None required
+    None required
 .OUTPUTS
- Assignmments of an specific AAD Group
+    Assignments of a specific AAD Group
 .NOTES
- Author: Jannik Reinhard (jannikreinhard.com)
- Twitter: @jannik_reinhard
- Release notes:
-  Version 1.0: Init
-  Version 2.0: Rewrite
-  Version 2.1: Generalization
-  Version 2.2: Add Graph scope
-#> 
+    Author : Jannik Reinhard (jannikreinhard.com)
+    Version: 2.3
+    Release: v1.0 - Init
+             v2.0 - Rewrite
+             v2.1 - Generalization
+             v2.2 - Add Graph scope
+             v2.3 - Fixed scope to Read, removed Select-MgProfile
+#>
 Param()
 
 function Write-Entry{
@@ -110,7 +114,7 @@ function Get-GroupAssignments{
     #Device Configuration
     $configurations = (Get-GraphCallCustom -endpoint "$uri/$type")
     $hasAssignment = $false
-    
+
     foreach ($configuration in $configurations){
         $assignmentsInfo = (Get-GraphCallCustom -endpoint ("$uri/$type/" + $configuration.id + "/$uriAssignment") -value $false)
 
@@ -133,8 +137,8 @@ function Get-GroupAssignments{
                 Write-Host "+" $configuration.displayName
                 $hasAssignment = $true
             }
-            
-            # Exclude 
+
+            # Exclude
             if($uriAssignment -eq "groupAssignments" -and $assignment.targetGroupId -eq $groupId -and $assignment.excludeGroup){
                 Write-Host "-" $configuration.displayName
                 $hasAssignment = $true
@@ -154,13 +158,13 @@ if (Get-Module -ListAvailable -Name Microsoft.Graph) {
     Write-Information "Microsoft Graph already installed"
 } else {
     try {
-        Install-Module -Name Microsoft.Graph -Scope CurrentUser -Repository PSGallery -Force 
+        Install-Module -Name Microsoft.Graph -Scope CurrentUser -Repository PSGallery -Force
     }catch{
-        $_.message 
+        $_.message
         exit
     }
 }
-Import-Module microsoft.graph.authentication  
+Import-Module microsoft.graph.authentication
 
 
 #########################################################################################################
@@ -168,7 +172,7 @@ Import-Module microsoft.graph.authentication
 #########################################################################################################
 
 #Auth
-$graph = Connect-MgGraph -Scopes DeviceManagementConfiguration.Read.All, DeviceManagementApps.ReadWrite.All
+$graph = Connect-MgGraph -Scopes DeviceManagementConfiguration.Read.All, DeviceManagementApps.Read.All
 $group = $null
 
 # Get an check aad group

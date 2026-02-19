@@ -1,38 +1,18 @@
-
 <#PSScriptInfo
-.VERSION 1.0
-.GUID 73e3aa75-340f-4f52-99ec-cfbb55a2e2d1
-.AUTHOR Jannik Reinhard
-.COMPANYNAME
-.COPYRIGHT
-.TAGS
-.LICENSEURI
-.PROJECTURI https://github.com/JayRHa/Intune-Scripts/tree/main/Deploy-DefaultFilter
-.ICONURI
-.EXTERNALMODULEDEPENDENCIES 
-.REQUIREDSCRIPTS
-.EXTERNALSCRIPTDEPENDENCIES
-.RELEASENOTES
-.PRIVATEDATA
-
+.SYNOPSIS
+    Deploy a default set of Intune assignment filters for Windows, iOS, Android, and macOS.
+.DESCRIPTION
+    Connects to Microsoft Graph and creates predefined assignment filters covering
+    device ownership, enrollment profiles, OS SKU, OS version, device categories,
+    and Cloud PC models.
+.NOTES
+    Author : Jannik Reinhard (jannikreinhard.com)
+    Version: 1.2
+    Release: v1.0 - Init
+             v1.1 - Add Windows365
+             v1.2 - Add description, bug fixes
 #>
 
-<# 
-
-.DESCRIPTION 
- Default set on intune filter 
-.INPUTS
- None required
-.OUTPUTS
- None
-.NOTES
- Author: Jannik Reinhard (jannikreinhard.com)
- Twitter: @jannik_reinhard
- Release notes:
-    Version 1.0: Init
-    Version 1.1: Add Windows365
-    Version 1.2: Add description
-#> 
 Param()
 
 function Get-GraphAuthentication{
@@ -45,12 +25,10 @@ function Get-GraphAuthentication{
 
 
     try {
-      Connect-MgGraph -Scopes "DeviceManagementServiceConfig.Read.All"
+      Connect-MgGraph -Scopes "DeviceManagementConfiguration.ReadWrite.All"
     } catch {
       Write-Error "Failed to connect to MgGraph"
     }
-    
-    Select-MgProfile -Name "beta"
 }
 function Add-IntuneFilter{
     param (
@@ -70,7 +48,7 @@ function Add-IntuneFilter{
         Rule = $Rule
         RoleScopeTags = @()
     }
-    
+
     New-MgDeviceManagementAssignmentFilter -BodyParameter $params
 }
 
@@ -88,11 +66,11 @@ Add-IntuneFilter -Name "AllCorporateDevices" -Platform "Windows10AndLater" -Desc
 
 # Enrollment Profile
 Get-MgDeviceManagementWindowAutopilotDeploymentProfile | ForEach-Object {
-    Add-IntuneFilter -Name ("Enrollment"+($($_.DisplayName).Trim())) -Platform "Windows10AndLater" -Description ("All devcies with enrollment profile"+($($_.DisplayName).Trim())) -Rule ('(device.enrollmentProfileName -eq "'+$($_.DisplayName)+'")' )
+    Add-IntuneFilter -Name ("Enrollment"+($($_.DisplayName).Trim())) -Platform "Windows10AndLater" -Description ("All devices with enrollment profile"+($($_.DisplayName).Trim())) -Rule ('(device.enrollmentProfileName -eq "'+$($_.DisplayName)+'")' )
 }
 
 # Operating System SKU
-$sku = @("Education", "Enterprise", "IoTEnterprise", "Professional", "Holographic")  
+$sku = @("Education", "Enterprise", "IoTEnterprise", "Professional", "Holographic")
 $sku | ForEach-Object {
     Add-IntuneFilter -Name "AllSku$_" -Platform "Windows10AndLater" -Description "All devices with SKU $_" -Rule ('(device.operatingSystemSKU  -eq "'+$_+'")')
 }
@@ -109,4 +87,3 @@ Get-MgDeviceManagementDeviceCategory | ForEach-Object {
 
 # Model
 Add-IntuneFilter -Name "AllCloudPCs" -Platform "Windows10AndLater" -Description "All Microsoft365 devices" -Rule '(device.model -contains "CloudPC") or (device.model -contains "Cloud PC")'
-

@@ -1,19 +1,24 @@
-<#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Get-IntuneComplianceAnomaly
-Description:
-Detect anomaly in the compliance state
-Release notes:
-Version 1.0: Init
-#> 
+<#PSScriptInfo
+.SYNOPSIS
+    Detect anomalies in Intune compliance state using Azure Cognitive Services.
+.DESCRIPTION
+    Queries Microsoft Graph for device compliance trend data, builds a time series
+    per compliance check, and sends each series to the Azure Anomaly Detector API.
+    When a positive anomaly is found a notification is posted to a Teams webhook.
+.NOTES
+    Author : Jannik Reinhard (jannikreinhard.com)
+    Version: 1.1
+    Release: v1.0 - Init
+             v1.1 - Bug fixes, code-quality improvements
+#>
+
 Function Get-AuthHeader{
     param (
         [parameter(Mandatory=$true)]$tenantId,
         [parameter(Mandatory=$true)]$clientId,
         [parameter(Mandatory=$true)]$clientSecret
        )
-    
+
     $authBody=@{
         client_id=$clientId
         client_secret=$clientSecret
@@ -30,7 +35,7 @@ Function Get-AuthHeader{
         'Authorization'="Bearer " + $accessToken.access_token
         'ExpiresOn'=$accessToken.expires_in
     }
-    
+
     return $authHeader
 }
 
@@ -59,7 +64,7 @@ function Send-TeamsWebHook{
     "ContentType" = 'application/json'
     }
 
-    Invoke-RestMethod @parameters | Out-NULL
+    Invoke-RestMethod @parameters | Out-Null
 }
 #################################################################################################
 ########################################### Start ###############################################
@@ -90,9 +95,15 @@ $params = @{
 	Top = 10000
 }
 
-$complianceState = Invoke-RestMethod -Uri ("https://graph.microsoft.com/beta/deviceManagement/reports/getHistoricalReport") -ContentType 'application/json' -Headers $authToken -Method POST -Body ($params | ConvertTo-Json)
+try {
+    $complianceState = Invoke-RestMethod -Uri ("https://graph.microsoft.com/beta/deviceManagement/reports/getHistoricalReport") -ContentType 'application/json' -Headers $authToken -Method POST -Body ($params | ConvertTo-Json)
+} catch {
+    Write-Error "Failed to retrieve compliance report: $_"
+    return
+}
+
 $stateCountJson = @'
-{ 
+{
     "series": [],
     "maxAnomalyRatio": 0.40,
     "sensitivity": 95,
@@ -102,6 +113,7 @@ $stateCountJson = @'
 
 
 foreach($check in $checks) {
+    $stateCountJson.series = @()
     $complianceState.values | ForEach-Object {
         if($_[0] -eq $check){
             $compliantState = @'
@@ -114,27 +126,32 @@ foreach($check in $checks) {
             $compliantState.timestamp = $_[2]
             $compliantState.value = $_[1]
             $compliantState.group = $_[0]
-        
+
             $stateCountJson.series += $compliantState
         }
     }
-    $stateCountJson.series = $stateCountJson.series | Group-Object timestamp | %{
+    $stateCountJson.series = $stateCountJson.series | Group-Object timestamp | ForEach-Object {
         New-Object psobject -Property @{
             timestamp = $_.Name
             value = ($_.Group | Measure-Object value -Sum).Sum
         }
-    } | Sort-Object timestamp -uniqu
-    
-    
+    } | Sort-Object timestamp -Unique
+
+
     $authHeader = @{'Ocp-Apim-Subscription-Key'="$anomalyKey"}
-    $result = Invoke-RestMethod -Uri "$anomalyEndpoint/anomalydetector/v1.0/timeseries/last/detect" -ContentType 'application/json' -Headers $authHeader -Method POST -Body  ($stateCountJson | ConvertTo-JSON)
+    try {
+        $result = Invoke-RestMethod -Uri "$anomalyEndpoint/anomalydetector/v1.0/timeseries/last/detect" -ContentType 'application/json' -Headers $authHeader -Method POST -Body  ($stateCountJson | ConvertTo-JSON)
+    } catch {
+        Write-Error "Failed to call Anomaly Detector API for check '$check': $_"
+        continue
+    }
     if($result.isAnomaly -eq $true -and $result.isPositiveAnomaly -eq $true){
 
         $date = [System.DateTime]::Parse($(($stateCountJson.series[$stateCountJson.series.count -1]).timestamp)).ToString("yyyy.MM.dd")
         $expectedValue = [math]::Round($($result.expectedValue), 2)
         $currentValue = [math]::Round($(($stateCountJson.series[$stateCountJson.series.count -1]).value), 2)
 
-	$text  = "`n  
+	$text  = "`n
 		Anomaly detected for compliance rule: $check.
 		Expected value: $expectedValue
 		Current values: $currentValue

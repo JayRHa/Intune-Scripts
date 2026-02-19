@@ -1,6 +1,5 @@
-
 <#PSScriptInfo
-.VERSION 1.0
+.VERSION 1.1
 .GUID 32017cad-9484-41d1-9f1c-93044955f3e5
 .AUTHOR Jannik Reinhard
 .COMPANYNAME
@@ -9,7 +8,7 @@
 .LICENSEURI
 .PROJECTURI https://github.com/JayRHa/Intune-Scripts/tree/main/Change-ImeLogLevel
 .ICONURI
-.EXTERNALMODULEDEPENDENCIES 
+.EXTERNALMODULEDEPENDENCIES
 .REQUIREDSCRIPTS
 .EXTERNALSCRIPTDEPENDENCIES
 .RELEASENOTES
@@ -17,20 +16,22 @@
 
 #>
 
-<# 
-
-.DESCRIPTION 
- Change the loglevel of the Intune management extension
+<#
+.SYNOPSIS
+    Change the log level of the Intune Management Extension (IME).
+.DESCRIPTION
+    Modifies the IME configuration XML to set the desired log verbosity,
+    restarts the IME service, and optionally opens the log folder.
 .INPUTS
- None required
+    None required
 .OUTPUTS
- None
+    None
 .NOTES
- Author: Jannik Reinhard (jannikreinhard.com)
- Twitter: @jannik_reinhard
- Release notes:
-  Version 1.0: Init
-#> 
+    Author : Jannik Reinhard (jannikreinhard.com)
+    Version: 1.1
+    Release: v1.0 - Init
+             v1.1 - Renamed to Set-ImeLoglevel, added Test-Path, try/catch
+#>
 Param()
 
 # Check if Admin
@@ -40,21 +41,31 @@ If (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     exit
 }
 
-Function Change-ImeLoglevel($logLevelValue){
+Function Set-ImeLoglevel($logLevelValue){
     $imeConfFile = "C:\Program Files (x86)\Microsoft Intune Management Extension\Microsoft.Management.Services.IntuneWindowsAgent.exe.config"
 
-    $configFile = New-Object System.XML.XMLDocument
-    $configFile.Load($imeConfFile)
+    if (-not (Test-Path $imeConfFile)) {
+        Write-Error "IME configuration file not found: $imeConfFile"
+        return
+    }
 
-    $logLevel = $configFile.configuration.'system.diagnostics'.sources.source
-    $logLevel.switchValue = "$logLevelValue"
-    $configFile.Save($imeConfFile)
-    Write-Warning "IME Log level changed to $logLevelValue"
+    try {
+        $configFile = New-Object System.XML.XMLDocument
+        $configFile.Load($imeConfFile)
+
+        $logLevel = $configFile.configuration.'system.diagnostics'.sources.source
+        $logLevel.switchValue = "$logLevelValue"
+        $configFile.Save($imeConfFile)
+        Write-Host "IME Log level changed to $logLevelValue"
+    }
+    catch {
+        Write-Error "Failed to update IME log level: $_"
+    }
 }
 
 Function Restart-Ime{
     Restart-Service -DisplayName "Microsoft Intune Management Extension"
-    Write-Warning "IME Service was restarted"    
+    Write-Host "IME Service was restarted"
 }
 
 # Select Logging level
@@ -65,7 +76,7 @@ while("Critical", "Error", "Warning", "Information", "Verbose" -notcontains $log
 }
 
 # Change logging level
-Change-ImeLoglevel($logLevelSelection)
+Set-ImeLoglevel($logLevelSelection)
 
 # Restart IME Service
 Restart-Ime

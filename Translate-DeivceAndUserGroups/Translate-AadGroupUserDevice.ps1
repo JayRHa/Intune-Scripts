@@ -1,56 +1,23 @@
-
 <#PSScriptInfo
-.VERSION 1.0
-.GUID e58f9c57-2652-4e17-9676-d6aa4e78cd8b
-.AUTHOR Jannik Reinhard
-.COMPANYNAME
-.COPYRIGHT
-.TAGS
-.LICENSEURI
-.PROJECTURI https://github.com/JayRHa/Intune-Scripts/blob/main/Translate-DeivceAndUserGroups/Translate-AadGroupUserDevice.ps1
-.ICONURI
-.EXTERNALMODULEDEPENDENCIES 
-.REQUIREDSCRIPTS
-.EXTERNALSCRIPTDEPENDENCIES
-.RELEASENOTES
-.PRIVATEDATA
-
-#>
-
-<# 
-
-.DESCRIPTION 
- Change a user group to a device group based on the device primary contact 
-.INPUTS
- None required
-.OUTPUTS
- None
+.SYNOPSIS
+    Translate an AAD user group to a device group (or vice versa) based on device primary owner.
+.DESCRIPTION
+    Reads members of an existing Azure AD group, resolves users to their owned
+    devices (or devices to their registered owners), and creates a new security
+    group with the translated membership.
 .NOTES
- Author: Jannik Reinhard (jannikreinhard.com)
- Twitter: @jannik_reinhard
- Release notes:
-  Version 1.0: Init
-#> 
+    Author : Jannik Reinhard (jannikreinhard.com)
+    Version: 1.1
+    Release: v1.0 - Init
+             v1.1 - Bug fixes, code-quality improvements
+#>
 
 Param()
 
 function Get-GraphAuthentication{
-    $GraphPowershellModulePath = "$global:Path/Microsoft.Graph.psd1"
     if (-not (Get-Module -ListAvailable -Name 'Microsoft.Graph')) {
-  
-        if (-Not (Test-Path $GraphPowershellModulePath)) {
-            Write-Error "Microsoft.Graph.Intune.psd1 is not installed on the system check: https://docs.microsoft.com/en-us/powershell/microsoftgraph/installation?view=graph-powershell-1.0"
-            Return
-        }
-        else {
-            Import-Module "$GraphPowershellModulePath"
-            $Success = $?
-  
-            if (-not ($Success)) {
-                Write-Error "Microsoft.Graph.Intune.psd1 is not installed on the system check: https://docs.microsoft.com/en-us/powershell/microsoftgraph/installation?view=graph-powershell-1.0"
-                Return
-            }
-        }
+        Write-Error "Microsoft.Graph module is not installed. See: https://docs.microsoft.com/en-us/powershell/microsoftgraph/installation?view=graph-powershell-1.0"
+        return $false
     }
 
     try {
@@ -59,21 +26,20 @@ function Get-GraphAuthentication{
       Write-Error "Failed to connect to MgGraph"
       return $false
     }
-    
-    Select-MgProfile -Name "beta"
+
     return $true
 }
 
 function Get-AllGroupMember {
     param(
-      [Parameter(Mandatory = $true)]  
+      [Parameter(Mandatory = $true)]
       $groupName
     )
     $groupId = (Get-MgGroup -Filter "displayname eq '$groupName'").id
     $groupMembers = Get-MgGroupMember -GroupId $groupId
     $groupMembers = $groupMembers | Sort-Object -Property AdditionalProperties.displayName
     $items = @()
-  
+
     $groupMembers | ForEach-Object {
         if($_.AdditionalProperties.'@odata.type' -eq '#microsoft.graph.user'){
             $param = [PSCustomObject]@{
@@ -85,14 +51,13 @@ function Get-AllGroupMember {
             $items += $param
         } elseif ($_.AdditionalProperties.'@odata.type' -eq '#microsoft.graph.device') {
             $param = [PSCustomObject]@{
-                ItemName                        = $_.AdditionalProperties.displayName 
+                ItemName                        = $_.AdditionalProperties.displayName
                 ItemType                        = "Device"
                 Id                              = $_.Id
                 Uri                             = "https://graph.microsoft.com/v1.0/directoryObjects/" + $_.Id
             }
             $items += $param
         } elseif ($_.AdditionalProperties.'@odata.type' -eq '#microsoft.graph.group') {
-            $colornumber= Get-Random -Maximum 9
             $param = [PSCustomObject]@{
                 ItemName                        =  $_.AdditionalProperties.displayName
                 ItemType                        = "Group"
@@ -121,34 +86,34 @@ function Get-MigrateGroupMember{
     if($macos){$os += 'MacMDM'}
     if($android){$os += 'Android'}
     if($ios){$os += 'IOS'}
-    
+
     $newGroupMember = @()
 
     if($migrationType -eq 'User'){
-        $groupMember | Where-Object {$_.ItemType -eq 'Device'} | Foreach-Object {
+        $groupMember | Where-Object {$_.ItemType -eq 'Device'} | ForEach-Object {
             $userId = (Get-MgDeviceRegisteredOwner -DeviceId $_.Id).Id
             if($userId){
                 $newGroupMember += [PSCustomObject]@{
-                    Uri = "https://graph.microsoft.com/v1.0/directoryObjects/" + $userId 
-                }  
+                    Uri = "https://graph.microsoft.com/v1.0/directoryObjects/" + $userId
+                }
             }
         }
-        $groupMember  | Where-Object {$_.ItemType -eq 'User'} | Foreach-Object {
+        $groupMember  | Where-Object {$_.ItemType -eq 'User'} | ForEach-Object {
             $newGroupMember += [PSCustomObject]@{
                 Uri             = $_.Uri
             }
         }
     }elseif($migrationType -eq 'Device'){
-        $groupMember  | Where-Object {$_.ItemType -eq 'User'} | Foreach-Object {
+        $groupMember  | Where-Object {$_.ItemType -eq 'User'} | ForEach-Object {
 
             (Get-MgUserOwnedDevice -UserId $_.Id) | ForEach-Object {
                 $newGroupMember += [PSCustomObject]@{
                     Uri             = "https://graph.microsoft.com/v1.0/directoryObjects/" + $_.Id
                     OperatinSystem  = $_.AdditionalProperties.operatingSystem
                 }
-            }                        
+            }
         }
-        $groupMember  | Where-Object {$_.ItemType -eq 'Device'} | Foreach-Object {
+        $groupMember  | Where-Object {$_.ItemType -eq 'Device'} | ForEach-Object {
             $newGroupMember += [PSCustomObject]@{
                 Uri             = $_.Uri
                 OperatinSystem  = $_.OperatinSystem
@@ -156,7 +121,7 @@ function Get-MigrateGroupMember{
         }
         $newGroupMember = $newGroupMember | Where-Object {$_.OperatinSystem -in $os}
     }
-    $newGroupMember = $newGroupMember | Sort-Object -Property uri -Uniqu 
+    $newGroupMember = $newGroupMember | Sort-Object -Property uri -Unique
     return $newGroupMember
 }
 
@@ -164,7 +129,7 @@ function Get-AllAadGroup{
     return Get-MgGroup -All
 }
 
-function Check-GroupName{
+function Test-GroupName{
     param(
         [Parameter(Mandatory)]
         $groupName,
@@ -201,13 +166,12 @@ function Add-MgtGroup{
 
     if($groupDescription){
         $bodyJson | Add-Member -NotePropertyName description -NotePropertyValue $groupDescription
-    } 
-    
+    }
+
     if($groupMember.Length -gt 0){
         $bodyJson | Add-Member -NotePropertyName 'members@odata.bind' -NotePropertyValue @($groupMember.uri)
     }
 
-    $bodyJson = $bodyJson | ConvertTo-Json
     New-MgGroup -BodyParameter $bodyJson
 }
 
@@ -221,7 +185,7 @@ Get-GraphAuthentication | Out-Null
 # Get an check aad group
 $aadGroupName = Read-Host "Enter the name of the AAD Group"
 $groups = Get-AllAadGroup
-$checkGroupName = Check-GroupName -groupName $aadGroupName -allGroups $groups
+$checkGroupName = Test-GroupName -groupName $aadGroupName -allGroups $groups
 
 if(-not $checkGroupName){
     Write-Warning "Group $aadGroupName not found"
@@ -241,7 +205,7 @@ if(-not $checkGroupName){
     while(-not $checkGroupName)
     {
         $aadGroupName = Read-Host "Enter the name of the AAD Group"
-        $checkGroupName = Check-GroupName -groupName $aadGroupName -allGroups $groups
+        $checkGroupName = Test-GroupName -groupName $aadGroupName -allGroups $groups
     }
 }
 

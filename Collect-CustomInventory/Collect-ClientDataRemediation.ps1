@@ -1,12 +1,16 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Collect-ClientDataRemediation.ps1
-Description:
-Remediation script to send data from an client to and azure function endpoint
-Release notes:
-Version 1.0: Init
-#> 
+.SYNOPSIS
+    Collect client telemetry and send it to an Azure Function endpoint.
+.DESCRIPTION
+    Remediation script that gathers CPU utilization, RAM usage, and Azure AD
+    join information from the local device, then POSTs the data as JSON to a
+    configured Azure Function URL.
+.NOTES
+    Author : Jannik Reinhard (jannikreinhard.com)
+    Version: 1.1
+    Release: v1.0 - Init
+             v1.1 - Replaced Get-WmiObject with Get-CimInstance, added guards
+#>
 
 #### Configuration ####
 $azureFunctionUrl = ""
@@ -15,14 +19,18 @@ $ramTestCycle = 10
 $time = Get-Date
 $runFrequenz = 1
 
+if ([string]::IsNullOrEmpty($azureFunctionUrl)) {
+    Write-Error "Azure Function URL is not configured. Set `$azureFunctionUrl before running."
+    exit 1
+}
 
 ###########################################################################################
 ################################### Functions #############################################
 ###########################################################################################
 function Get-AvgCpuUtilization($cpuTestCycle){
     $avgLoad = 0
-    1..$cpuTestCycle | % {
-        $avgLoad += (Get-WmiObject Win32_Processor | Measure-Object -property LoadPercentage -Average).Average
+    1..$cpuTestCycle | ForEach-Object {
+        $avgLoad += (Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
         Start-Sleep -Milliseconds 50
     }
 
@@ -37,8 +45,8 @@ function Get-AvgRam($ramTestCycle){
     $freephysicalmemory = 0
     $totalvirtualmemorysize = 0
     $freevirtualmemory = 0
-    1..$ramTestCycle | % {
-        $ramUsage = Get-WmiObject win32_OperatingSystem
+    1..$ramTestCycle | ForEach-Object {
+        $ramUsage = Get-CimInstance Win32_OperatingSystem
         $totalvisiblememorysize += $ramUsage.totalvisiblememorysize
         $freephysicalmemory += $ramUsage.freephysicalmemory
         $totalvirtualmemorysize += $ramUsage.totalvirtualmemorysize
@@ -64,16 +72,16 @@ function Get-ValidationInfo{
                     $AzureADJoinCertificate = Get-ChildItem -Path "Cert:\LocalMachine\My" -Recurse | Where-Object { $PSItem.Subject -like "CN=$($AzureADJoinInfoKey)" }
                 }
                 else {
-                    $AzureADJoinCertificate = Get-ChildItem -Path "Cert:\LocalMachine\My" -Recurse | Where-Object { $PSItem.Thumbprint -eq $AzureADJoinInfoKey }    
+                    $AzureADJoinCertificate = Get-ChildItem -Path "Cert:\LocalMachine\My" -Recurse | Where-Object { $PSItem.Thumbprint -eq $AzureADJoinInfoKey }
                 }
 			if ($AzureADJoinCertificate -ne $null) {
 				$AzureADDeviceID = ($AzureADJoinCertificate | Select-Object -ExpandProperty "Subject") -replace "CN=", ""
-				$AzureADJoinDate = ($AzureADJoinCertificate | Select-Object -ExpandProperty "NotBefore") 
+				$AzureADJoinDate = ($AzureADJoinCertificate | Select-Object -ExpandProperty "NotBefore")
 			}
 		}
     $AzureADTenantInfoRegistryKeyPath = "HKLM:\SYSTEM\CurrentControlSet\Control\CloudDomainJoin\TenantInfo"
 	$AzureADTenantID = Get-ChildItem -Path $AzureADTenantInfoRegistryKeyPath | Select-Object -ExpandProperty "PSChildName"
-	
+
 
     return @"
     {
@@ -101,4 +109,11 @@ $result = @"
 }
 "@
 
-Invoke-WebRequest -Uri $azureFunctionUrl -Method "POST" -Body $result
+try {
+    Invoke-WebRequest -Uri $azureFunctionUrl -Method "POST" -Body $result
+    exit 0
+}
+catch {
+    Write-Error "Failed to send data to Azure Function: $_"
+    exit 1
+}

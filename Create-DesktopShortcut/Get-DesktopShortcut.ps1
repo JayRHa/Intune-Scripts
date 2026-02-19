@@ -1,16 +1,19 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Get-DesktopShortcut
-Description:
-Check if the shortcut exist
-Release notes:
-Version 1.0: Init
-#> 
+.SYNOPSIS
+    Detect if desktop shortcut exists
+.DESCRIPTION
+    Intune Win32 app detection script. Checks if the shortcut file exists on the public desktop.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 1.0
+#>
 
-#Name of the shortcut
-$shortcutName = "Intranet Shortcut"  
+$shortcutName = "Intranet Shortcut"
 
-if (Test-Path -Path "$Env:Public\Desktop\$shortcutName.lnk"){
-    Write-Output "0"
+if (Test-Path -Path "$Env:Public\Desktop\$shortcutName.lnk") {
+    Write-Host "Shortcut found"
+    exit 0
+} else {
+    Write-Host "Shortcut not found"
+    exit 1
 }

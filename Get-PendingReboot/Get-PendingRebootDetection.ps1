@@ -1,14 +1,22 @@
-If(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired")
-{
-    Exit 1
+<#
+.SYNOPSIS
+    Detect if a reboot is pending
+.DESCRIPTION
+    Checks multiple registry keys to determine whether a system reboot is pending.
+    Exits with code 1 if a reboot is required.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 1.0
+#>
+
+if (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired") {
+    exit 1
 }
-ElseIf(test-path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending")
-{
-    Exit 1
+elseif (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending") {
+    exit 1
 }
-ElseIf(test-path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootInProgress")
-{
-    Exit 1
+elseif (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootInProgress") {
+    exit 1
 }
 
-Exit 0
+exit 0

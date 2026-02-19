@@ -1,12 +1,13 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Get-CleanUpDiskRemediation
-Description:
-Cleanup disk when utilization <15GB
-Release notes:
-Version 1.0: Init
-#> 
+.SYNOPSIS
+    Remediate low disk space by running Disk Cleanup
+.DESCRIPTION
+    Configures selected cleanup categories in the registry and invokes CleanMgr.exe
+    to free disk space. Use as an Intune Proactive Remediation script.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 1.0
+#>
 
 <#
 'Active Setup Temp Folders', 'BranchCache', 'Content Indexer Cleaner', 'Device Driver Packages', 'Downloaded Program Files', 'GameNewsFiles', 'GameStatisticsFiles', 'GameUpdateFiles',
@@ -16,17 +17,23 @@ Version 1.0: Init
 'Windows Upgrade Log Files'
 #>
 
-$cleanupTypeSelection = 'Temporary Sync Files', 'Downloaded Program Files', 'Memory Dump Files', 'Recycle Bin'
+try {
+    $cleanupTypeSelection = 'Temporary Sync Files', 'Downloaded Program Files', 'Memory Dump Files', 'Recycle Bin'
 
-foreach ($keyName in $cleanupTypeSelection) {
-    $newItemParams = @{
-        Path         = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\$keyName"
-        Name         = 'StateFlags0001'
-        Value        = 1
-        PropertyType = 'DWord'
-        ErrorAction  = 'SilentlyContinue'
+    foreach ($keyName in $cleanupTypeSelection) {
+        $newItemParams = @{
+            Path         = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\$keyName"
+            Name         = 'StateFlags0001'
+            Value        = 1
+            PropertyType = 'DWord'
+            ErrorAction  = 'SilentlyContinue'
+        }
+        New-ItemProperty @newItemParams | Out-Null
     }
-    New-ItemProperty @newItemParams | Out-Null
-}
 
-Start-Process -FilePath CleanMgr.exe -ArgumentList '/sagerun:1' -NoNewWindow -Wait
+    Start-Process -FilePath CleanMgr.exe -ArgumentList '/sagerun:1' -NoNewWindow -Wait
+    exit 0
+} catch {
+    Write-Error "Failed to run disk cleanup: $_"
+    exit 1
+}

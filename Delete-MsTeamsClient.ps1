@@ -1,12 +1,24 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Delete-TeamsClient
-Description:
-Delete the build-in Windows 11 teams client with help of intune
-Release notes:
-Version 1.0: Init
-#>  
+.SYNOPSIS
+    Remove built-in Microsoft Teams client
+.DESCRIPTION
+    Removes the AppX package for the built-in Windows 11 Teams client.
+    Use as an Intune Proactive Remediation script.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 1.0
+#>
 
-
-Get-AppxPackage | Where-Object Name -like "*MicrosoftTeams*" | Remove-AppxPackage
+try {
+    $teamsPackage = Get-AppxPackage -AllUsers | Where-Object { $_.Name -like "*MicrosoftTeams*" }
+    if ($teamsPackage) {
+        $teamsPackage | Remove-AppxPackage -AllUsers -ErrorAction Stop
+        Write-Host "Microsoft Teams client removed"
+    } else {
+        Write-Host "Microsoft Teams client not found"
+    }
+    exit 0
+} catch {
+    Write-Error "Failed to remove Microsoft Teams: $_"
+    exit 1
+}

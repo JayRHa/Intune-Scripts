@@ -1,12 +1,16 @@
-<#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Store-DataInLogWorkspace.ps1
-Description:
-Azure function code to validate an request and store data in log analytics
-Release notes:
-Version 1.0: Init
-#> 
+<#PSScriptInfo
+.SYNOPSIS
+    Azure Function to validate incoming device inventory requests and store data in Log Analytics.
+.DESCRIPTION
+    Receives an HTTP request containing device telemetry, validates the tenant ID
+    and device name against Azure AD, then forwards the payload to a Log Analytics
+    workspace via the HTTP Data Collector API.
+.NOTES
+    Author : Jannik Reinhard (jannikreinhard.com)
+    Version: 1.1
+    Release: v1.0 - Init
+             v1.1 - Bug fixes, code-quality improvements
+#>
 
 using namespace System.Net
 param($Request, $TriggerMetadata)
@@ -25,7 +29,6 @@ function Get-TenantIdValidated {
     $currentTenantId = (Get-MgOrganization).Id
     if ($currentTenantId -ne $tenantId) {
         throw "The tenant id provided is not the same as the current tenant id"
-        return $false
     }
     return $true
 }
@@ -38,7 +41,6 @@ function Get-DeviceNameValidated {
     $currentDeviceId = (Get-MgDevice -Filter "displayName eq '$deviceName'").DeviceId
     if ($currentDeviceId -ne $aadDeviceId) {
         throw "The device name provided is not the same as the current device name"
-        return $false
     }
     return $true
 }
@@ -116,6 +118,7 @@ catch {
             StatusCode = [System.Net.HttpStatusCode]::InternalServerError
             Body       = "Failed to authenticate to Azure AD: $_"
         })
+    return
 }
 
 
@@ -131,6 +134,7 @@ catch {
             StatusCode = [System.Net.HttpStatusCode]::BadRequest
             Body       = "Failed to get data from request: $_"
         })
+    return
 }
 
 try {
@@ -141,6 +145,7 @@ catch {
             StatusCode = [System.Net.HttpStatusCode]::BadRequest
             Body       = "Failed to get data from request: $_"
         })
+    return
 }
 
 try {
@@ -155,8 +160,9 @@ try {
 catch {
     Push-OutputBinding -Name response -Value ([HttpResponseContext]@{
             StatusCode = [System.Net.HttpStatusCode]::BadRequest
-            Body       = "Falidation failed: $_"
+            Body       = "Validation failed: $_"
         })
+    return
 }
 
 
@@ -166,7 +172,7 @@ try {
         f_customerId = $workspaceId
         f_sharedKey  = $workspaceKey
         f_body       = ([System.Text.Encoding]::UTF8.GetBytes($data))
-        f_logType    = $logType 
+        f_logType    = $logType
     }
 
     $logResponse = Send-LogAnalyticsData @params
@@ -176,6 +182,7 @@ catch {
             StatusCode = [System.Net.HttpStatusCode]::InternalServerError
             Body       = "Failed to send data to Log Analytics: $_"
         })
+    return
 }
 
 Push-OutputBinding -Name response -Value ([HttpResponseContext]@{

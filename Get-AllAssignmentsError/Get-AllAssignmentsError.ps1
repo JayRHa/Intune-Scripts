@@ -1,53 +1,21 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Get-AllErrorAssignments
-Description:
-Get all failed assignment in the tenant as csv
-Release notes:
-Version 1.0: Init
-#> 
-function Get-AuthToken {
-    [cmdletbinding()]
-    param
-    (
-        [Parameter(Mandatory=$true)]
-        $User
-    )
+.SYNOPSIS
+    Get all failed Intune assignments as CSV
+.DESCRIPTION
+    Retrieves all failed configuration profile and app assignments in the tenant
+    and exports them as CSV files. Uses Microsoft Graph API via Microsoft.Graph.Authentication.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 1.0
+#>
 
-    $userUpn = New-Object "System.Net.Mail.MailAddress" -ArgumentList $User
-    $tenant = $userUpn.Host
-    $AadModule = Get-Module -Name "AzureAD" -ListAvailable
-    if ($AadModule -eq $null) {
-        Write-Host "AzureAD PowerShell module not found, looking for AzureADPreview"
-        $AadModule = Get-Module -Name "AzureADPreview" -ListAvailable
+#Requires -Modules Microsoft.Graph.Authentication
+
+function Connect-MgGraphIfNeeded {
+    $context = Get-MgContext
+    if (-not $context) {
+        Connect-MgGraph -Scopes "DeviceManagementConfiguration.Read.All,DeviceManagementApps.Read.All" -NoWelcome
     }
-
-    $adal = Join-Path $AadModule.ModuleBase "Microsoft.IdentityModel.Clients.ActiveDirectory.dll"
-    $adalforms = Join-Path $AadModule.ModuleBase "Microsoft.IdentityModel.Clients.ActiveDirectory.Platform.dll"
-
-    Add-Type -Path $adal
-    Add-Type -Path $adalforms
-    # [System.Reflection.Assembly]::LoadFrom($adal) | Out-Null
-    # [System.Reflection.Assembly]::LoadFrom($adalforms) | Out-Null
-    $clientId = "d1ddf0e4-d672-4dae-b554-9d5bdfd93547"
-    $redirectUri = "urn:ietf:wg:oauth:2.0:oob"
-    $resourceAppIdURI = "https://graph.microsoft.com"
-    $authority = "https://login.microsoftonline.com/$Tenant"
-
-    $authContext = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext" -ArgumentList $authority
-    $platformParameters = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.PlatformParameters" -ArgumentList "Auto"
-    $userId = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier" -ArgumentList ($User, "OptionalDisplayableId")
-    $authResult = $authContext.AcquireTokenAsync($resourceAppIdURI,$clientId,$redirectUri,$platformParameters,$userId).Result
-
-      
-    $authHeader = @{
-        'Content-Type'='application/json'
-        'Authorization'="Bearer " + $authResult.AccessToken
-        'ExpiresOn'=$authResult.ExpiresOn
-        }
-
-    return $authHeader
 }
 
 function Get-GraphCall {
@@ -55,7 +23,12 @@ function Get-GraphCall {
         [Parameter(Mandatory)]
         $url
     )
-    return Invoke-RestMethod -Uri https://graph.microsoft.com/beta/$url -Headers $authToken -Method GET
+    try {
+        return Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/beta/$url" -Method GET
+    } catch {
+        Write-Error "Graph API call failed: $_"
+        return $null
+    }
 }
 
 
@@ -63,7 +36,7 @@ function Get-FailedConfigAssignments{
     param(
         [Parameter(Mandatory)]
         $configProfileId
-    ) 
+    )
     $result = (Get-GraphCall -url ("deviceManagement/deviceConfigurations/$configProfileId/deviceStatuses?" + '$filter=(platform%20eq%200)')).value
     return $result | Where-Object {$_.status -eq 'error'} | Select-Object deviceDisplayName, userPrincipalName, status, lastReportedDateTime
 }
@@ -72,22 +45,15 @@ function Get-FailedAppAssignments{
     param(
         [Parameter(Mandatory)]
         $appId
-    ) 
+    )
     $result = (Get-GraphCall -url "deviceAppManagement/mobileApps/$appId/deviceStatuses").value
-    return $result | Select-Object deviceName, userPrincipalName, installState, lastSyncDateTime | Where-Object {($_.installState -ne 'installed
-')}
+    return $result | Select-Object deviceName, userPrincipalName, installState, lastSyncDateTime | Where-Object {($_.installState -ne 'installed')}
 }
 
 #################################################################################################
 ########################################### Start ###############################################
 #################################################################################################
-if(-not $global:authToken){
-    if($User -eq $null -or $User -eq ""){
-    $User = Read-Host -Prompt "Please specify your user principal name for Azure Authentication"
-    Write-Host
-    }
-    $global:authToken = Get-AuthToken -User $User
-}
+Connect-MgGraphIfNeeded
 
 # Config Profiles
 $config = (Get-GraphCall -url 'deviceManagement/deviceConfigurations?$select=id,displayName').value

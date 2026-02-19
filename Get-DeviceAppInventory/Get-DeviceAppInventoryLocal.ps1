@@ -1,35 +1,22 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Get-DeviceAppInventory
-Description:
-Write all discovered app in an log analytics workspace
-Release notes:
-Version 1.0: Init
+.SYNOPSIS
+    Export device app inventory to JSON
+.DESCRIPTION
+    Retrieves all discovered apps from Intune managed devices and writes them
+    to a JSON file. Uses Microsoft Graph PowerShell SDK.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 1.0
 #>
 
 ################################################################################################################
 ############################################# Variables ########################################################
 ################################################################################################################
 function Get-GraphAuthentication{
-    $GraphPowershellModulePath = "$global:Path/Microsoft.Graph.psd1"
     if (-not (Get-Module -ListAvailable -Name 'Microsoft.Graph')) {
-  
-        if (-Not (Test-Path $GraphPowershellModulePath)) {
-            Write-Error "Microsoft.Graph.Intune.psd1 is not installed on the system check: https://docs.microsoft.com/en-us/powershell/microsoftgraph/installation?view=graph-powershell-1.0"
-            Return
-        }
-        else {
-            Import-Module "$GraphPowershellModulePath"
-            $Success = $?
-  
-            if (-not ($Success)) {
-                Write-Error "Microsoft.Graph.Intune.psd1 is not installed on the system check: https://docs.microsoft.com/en-us/powershell/microsoftgraph/installation?view=graph-powershell-1.0"
-                Return
-            }
-        }
+        Write-Error "Microsoft.Graph module is not installed. See: https://docs.microsoft.com/en-us/powershell/microsoftgraph/installation?view=graph-powershell-1.0"
+        return $false
     }
-  
 
     try {
       Connect-MgGraph -Scopes "Device.Read.All"
@@ -37,8 +24,7 @@ function Get-GraphAuthentication{
       Write-Error "Failed to connect to MgGraph"
       return $false
     }
-    
-    Select-MgProfile -Name "beta"
+
     return $true
 }
 
@@ -48,7 +34,7 @@ function Get-GraphAuthentication{
 
 Get-GraphAuthentication | Out-Null
 
-$deviceList = []
+$deviceList = @()
 Get-MgDeviceManagementManagedDevice | ForEach-Object {
     $deviceHostname = $_.deviceName
     $device = Get-MgDeviceManagementManagedDevice -Expand detectedApps -ManagedDeviceId $_.id
@@ -64,4 +50,4 @@ Get-MgDeviceManagementManagedDevice | ForEach-Object {
     }
 }
 
-$deviceList | Out-File -FilePath "$global:Path/DeviceAppInventory.json" -Force
+$deviceList | Out-File -FilePath "./DeviceAppInventory.json" -Force

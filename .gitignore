@@ -1,4 +1,38 @@
-*.tmp
-Sync-SecWithDistributionGroup/test.test
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & generated output
+*.log
+*.csv
+
+# Secrets & certificates
+.env
 *.pfx
 *.cer
+*.pem
+credentials.json
+
+# Project-specific
+Sync-SecWithDistributionGroup/test.test
+
+# Temp files
+*.tmp
+*.bak

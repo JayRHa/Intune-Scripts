@@ -1,12 +1,13 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Create-WaveDeplyomentGroups
-Description:
-Automatically create assignment groups for config rollouts
-Release notes:
-Version 1.0: Init
-#> 
+.SYNOPSIS
+    Create wave deployment groups for Intune config rollouts
+.DESCRIPTION
+    Automatically create assignment groups for configuration rollouts by distributing
+    devices across multiple groups based on percentage-based wave definitions.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 1.0
+#>
 
 function Get-AuthHeader{
     param (
@@ -14,7 +15,7 @@ function Get-AuthHeader{
         [parameter(Mandatory=$true)]$clientId,
         [parameter(Mandatory=$true)]$clientSecret
        )
-    
+
     $authBody=@{
         client_id=$clientId
         client_secret=$clientSecret
@@ -31,7 +32,7 @@ function Get-AuthHeader{
         'Authorization'="Bearer " + $accessToken.access_token
         'ExpiresOn'=$accessToken.expires_in
     }
-    
+
     return $authHeader
 }
 
@@ -40,7 +41,12 @@ function Get-GraphCall {
         [Parameter(Mandatory)]
         $apiUri
     )
-    return Invoke-RestMethod -Uri https://graph.microsoft.com/beta/$apiUri -Headers $authToken -Method GET
+    try {
+        return Invoke-RestMethod -Uri https://graph.microsoft.com/beta/$apiUri -Headers $authToken -Method GET
+    } catch {
+        Write-Error "Graph API call failed: $_"
+        return $null
+    }
 }
 
 function Get-GraphCallPaging {
@@ -53,7 +59,12 @@ function Get-GraphCallPaging {
     $results = @()
 
     do {
-        $response = Invoke-RestMethod -Uri $url -Headers $authToken -Method GET
+        try {
+            $response = Invoke-RestMethod -Uri $url -Headers $authToken -Method GET
+        } catch {
+            Write-Error "Graph API paging call failed: $_"
+            return $results
+        }
         $results += $response.value
         $url = $response.'@odata.nextLink'
     } while ($url)
@@ -71,7 +82,12 @@ function Invoke-GroupCreation {
     $body.displayName = $groupName
     $body.mailNickname = $groupName.replace(" ","")
 
-    return (Invoke-RestMethod -Uri https://graph.microsoft.com/beta/groups -Headers $authToken -Method POST -Body ($body | ConvertTo-Json)).id
+    try {
+        return (Invoke-RestMethod -Uri https://graph.microsoft.com/beta/groups -Headers $authToken -Method POST -Body ($body | ConvertTo-Json)).id
+    } catch {
+        Write-Error "Failed to create group '$groupName': $_"
+        return $null
+    }
 }
 
 function Add-Member {
@@ -82,7 +98,11 @@ function Add-Member {
 
     $body = '{ "@odata.id": "https://graph.microsoft.com/v1.0/directoryObjects/' + $memberId + '" }'
 
-    $member = Invoke-RestMethod -Uri ("https://graph.microsoft.com/beta/groups/$groupId/members/" + '$ref') -Headers $authToken -Method POST -Body $body
+    try {
+        $member = Invoke-RestMethod -Uri ("https://graph.microsoft.com/beta/groups/$groupId/members/" + '$ref') -Headers $authToken -Method POST -Body $body
+    } catch {
+        Write-Error "Failed to add member '$memberId' to group '$groupId': $_"
+    }
 }
 
 function Add-Members {
@@ -90,7 +110,7 @@ function Add-Members {
         [Parameter(Mandatory)]$groupId,
         [Parameter(Mandatory)]$members
     )
-    if($devices.count -le 0){return}
+    if($members.count -le 0){return}
     $members | ForEach-Object{
         Add-Member -groupId $groupId -memberId $_.id
     }
@@ -104,6 +124,11 @@ function Add-Members {
 $tenantId = ''
 $clientId = ''
 $clientSecret = ''
+
+if ([string]::IsNullOrEmpty($tenantId) -or [string]::IsNullOrEmpty($clientId) -or [string]::IsNullOrEmpty($clientSecret)) {
+    Write-Error "Please configure tenantId, clientId and clientSecret"
+    return
+}
 
 # Distribution
 $groups = @()
@@ -129,12 +154,12 @@ $global:authToken = Get-AuthHeader -tenantId $tenantId -clientId $clientId -clie
 
 # Get All devices
 #$devices = (Get-GraphCall -apiUri ("devices" + $filter)).value
-$devices = (Get-GraphCallPaging -apiUri ("devices" + $filter)).value
+$devices = Get-GraphCallPaging -apiUri ("devices" + $filter)
 
 
 
 $memberCount = 0
-foreach ($group in $groups) 
+foreach ($group in $groups)
 {
     if((Get-GraphCall -apiUri ('groups?$filter=startswith(displayName, ' +"'$($group.GroupName)')")).value){
         Write-Error "The defined group already exist"

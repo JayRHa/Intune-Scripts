@@ -1,16 +1,43 @@
+"""
+Invoke-ImeAnalization - Analyze Intune Management Extension logs with Azure OpenAI.
+
+Reads the local IME log file and sends it to Azure OpenAI for error analysis
+and troubleshooting suggestions.
+
+Author:  Jannik Reinhard (jannikreinhard.com)
+Version: 1.1
+Release: v1.0 - Init
+         v1.1 - Security: use environment variables for credentials, added error handling
+"""
+
 import os
+import sys
 from openai import AzureOpenAI
 
-openai_azure_endpoint = "https://NAMEOFYOURDEPLOYMENT.openai.azure.com/"
-openai_key ="YOUR API KEY" # os.getenv(OPENAIKEY)
+# Configuration via environment variables
+openai_azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "")
+openai_key = os.environ.get("AZURE_OPENAI_KEY", "")
 
+if not openai_azure_endpoint or not openai_key:
+    print("Error: Set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_KEY environment variables.", file=sys.stderr)
+    sys.exit(1)
 
-file_path = os.path.join('C:\\', 'ProgramData', 'Microsoft', 'IntuneManagementExtension', 'Logs', 'IntuneManagementExtension.log')
-with open(file_path, 'r') as file:
-    log_content = file.read()
+file_path = os.path.join(
+    "C:\\", "ProgramData", "Microsoft", "IntuneManagementExtension", "Logs", "IntuneManagementExtension.log"
+)
+
+try:
+    with open(file_path, "r") as file:
+        log_content = file.read()
+except FileNotFoundError:
+    print(f"Error: Log file not found at {file_path}", file=sys.stderr)
+    sys.exit(1)
+except OSError as exc:
+    print(f"Error reading log file: {exc}", file=sys.stderr)
+    sys.exit(1)
 
 prompt = f"""
-You are an senior intune engineer. Your task is to find errors in the [Intune Management Extension log]. Give the user a summary of the log an point him to errors on an structured way. Explain to the user what is mean and how he can check and troubleshoot this.
+You are a senior Intune engineer. Your task is to find errors in the [Intune Management Extension log]. Give the user a summary of the log and point them to errors in a structured way. Explain what each error means and how to check and troubleshoot it.
 
 [Intune Management Extension log]
 {log_content}
@@ -22,17 +49,19 @@ client = AzureOpenAI(
     api_key=openai_key,
     api_version="2024-02-01",
 )
-      
-completion = client.chat.completions.create(
-    model="gpt-4o",
-    temperature=0,
-    messages=[
-        {
-            "role": "user",
-            "content": prompt,
-        }
-    ]
-)
 
-print(completion.choices[0].message.content)
-
+try:
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        temperature=0,
+        messages=[
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ],
+    )
+    print(completion.choices[0].message.content)
+except Exception as exc:
+    print(f"Error calling Azure OpenAI: {exc}", file=sys.stderr)
+    sys.exit(1)

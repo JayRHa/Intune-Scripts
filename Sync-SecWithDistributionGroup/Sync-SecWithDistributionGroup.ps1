@@ -1,13 +1,17 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Sync-DistributionGroupWithSecurityGroup
-Description:
-Mirror a distribution group with an security groups members
-Release notes:
-Version 1.0: Init
-Verison 2.0b: Reworked the authentication scheme to use system managed identity and be more robust (Michael Mardahl)
-#> 
+.SYNOPSIS
+    Mirror Azure AD security groups into Exchange Online distribution groups.
+.DESCRIPTION
+    Connects via managed identity to Microsoft Graph and Exchange Online, finds
+    security groups by prefix, and synchronises their transitive members into
+    matching distribution groups (creating them when missing).
+.NOTES
+    Author : Jannik Reinhard (jannikreinhard.com)
+    Version: 2.1
+    Release: v1.0 - Init
+             v2.0b - Reworked authentication to system managed identity (Michael Mardahl)
+             v2.1 - Replaced Where alias with Where-Object, try/catch on Connect-AzAccount
+#>
 
 
 #region declarations
@@ -64,7 +68,7 @@ foreach ($SecurityGroup in $SecurityGroups)
 	$distGroupName = "$($SecurityGroup.displayName)$distGroupSuffix"
 	#Get transitive members of security group
 	$secMembers = Invoke-GraphRequest "/groups/$($SecurityGroup.id)/transitiveMembers"
-	
+
 	#find existing distribution groups and create a new one if none are found
 	$distGroup = Get-DistributionGroup -Identity $distGroupName -ErrorAction SilentlyContinue
 
@@ -72,8 +76,8 @@ foreach ($SecurityGroup in $SecurityGroups)
 		"[INFO] Existing group found ($distGroupName). Mirroring members."
 
 		$distMembers = Get-DistributionGroupMember -Identity $distGroupName
-		$toRemove = $distMembers | Where {$_.ExternalDirectoryObjectId -notin $secMembers.id}
-		$toAdd = $secMembers | Where {$_.id -notin $distMembers.ExternalDirectoryObjectId} 
+		$toRemove = $distMembers | Where-Object { $_.ExternalDirectoryObjectId -notin $secMembers.id }
+		$toAdd = $secMembers | Where-Object { $_.id -notin $distMembers.ExternalDirectoryObjectId }
 
 		#add members
 		foreach ($member in $toAdd){
@@ -102,7 +106,7 @@ foreach ($SecurityGroup in $SecurityGroups)
 
 		New-DistributionGroup -Name $distGroupName -Type "Distribution"
 	}
-	
+
 
 
 }

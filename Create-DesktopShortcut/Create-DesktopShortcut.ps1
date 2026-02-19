@@ -1,19 +1,23 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Create-DesktopShortcut
-Description:
-Copy the lnk file to the desktop
-Release notes:
-Version 1.0: Init
-#> 
+.SYNOPSIS
+    Create desktop shortcut for web page
+.DESCRIPTION
+    Intune Win32 app install script. Copies the .lnk shortcut file and icon to the public desktop.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 1.0
+#>
 
-#Name of the shortcut
 $shortcutName = "Intranet Shortcut"
 $iconPath = "C:\ProgramData\WebpageShortcut\"
 
-$ScriptPath = [System.IO.Path]::GetDirectoryName($MyInvocation.MyCommand.Definition)
-md $iconPath -ErrorAction SilentlyContinue
-Copy-Item .\webPage.ico $iconPath -force -Recurse 
-
-Copy-Item -Path "$ScriptPath\$shortcutName.lnk" -Destination "$Env:Public\Desktop"
+try {
+    $ScriptPath = $PSScriptRoot
+    New-Item -ItemType Directory -Path $iconPath -ErrorAction SilentlyContinue | Out-Null
+    Copy-Item -Path "$ScriptPath\webPage.ico" -Destination $iconPath -Force -Recurse
+    Copy-Item -Path "$ScriptPath\$shortcutName.lnk" -Destination "$Env:Public\Desktop" -Force
+    exit 0
+} catch {
+    Write-Error "Failed to create shortcut: $_"
+    exit 1
+}

@@ -1,36 +1,45 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Make-Speedtest
-Description:
-Manke an speedtest and upload the result to log analytics workspace
-Release notes:
-Version 1.0: Init
-#> 
+.SYNOPSIS
+    Run a network speed test and upload results to a Log Analytics workspace.
+.DESCRIPTION
+    Downloads a test file multiple times to measure average throughput, resolves
+    the public IP via ifconfig.me (HTTPS), and sends the results as JSON to
+    Azure Monitor / Log Analytics using the HTTP Data Collector API.
+.NOTES
+    Author : Jannik Reinhard (jannikreinhard.com)
+    Version: 1.1
+    Release: v1.0 - Init
+             v1.1 - HTTPS for ifconfig.me, renamed Send-LogAnalyticsData, guards
+#>
 
 ################################################################################################################
 ############################################# Variables ########################################################
 ################################################################################################################
-# Speedtest 
+# Speedtest
 $testCount = 3
 $testFile = 'https://github.com/JayRHa/Intune-Scripts/raw/main/Make-Speedtest/testfile.txt'
 $fileSize = 5 #File size in Mbit
-# Log Analytics Workspcae
+# Log Analytics Workspace
 $customerId = "" # Add Workspace ID
 $sharedKey = "" # Add Primary key
 $logType = "Speedtest"
 ################################################################################################################
+
+if ([string]::IsNullOrEmpty($customerId) -or [string]::IsNullOrEmpty($sharedKey)) {
+    Write-Error "Log Analytics credentials are not configured. Set `$customerId and `$sharedKey before running."
+    exit 1
+}
 
 Function Measure-NetworkSpeed($f_testFile, $f_fileSize){
     $tempFile  = Join-Path -Path $env:TEMP -ChildPath 'testfile.tmp'
     $webClient = New-Object Net.WebClient
     $time = Measure-Command { $webClient.DownloadFile($f_testFile,$tempFile) } | Select-Object -ExpandProperty TotalSeconds
     $speedMbps = ($f_fileSize / $time) * 8
-    return $speedMbps   
+    return $speedMbps
 }
 
 Function Get-PublicIp{
-    return (Invoke-WebRequest -uri "http://ifconfig.me/ip").Content
+    return (Invoke-WebRequest -Uri "https://ifconfig.me/ip").Content
 }
 
 Function Build-Signature ($customerId, $sharedKey, $date, $contentLength, $method, $contentType, $resource)
@@ -49,7 +58,7 @@ Function Build-Signature ($customerId, $sharedKey, $date, $contentLength, $metho
     return $authorization
 }
 
-Function Post-LogAnalyticsData($f_customerId, $f_sharedKey, $f_body, $f_logType)
+Function Send-LogAnalyticsData($f_customerId, $f_sharedKey, $f_body, $f_logType)
 {
     $method = "POST"
     $contentType = "application/json"
@@ -80,26 +89,32 @@ Function Post-LogAnalyticsData($f_customerId, $f_sharedKey, $f_body, $f_logType)
 # Get network speed
 $time = 0
 
-for ($i=0; $i -lt $testCount; $i++){
-    $time = $time + (Measure-NetworkSpeed -f_testFile $testFile -f_fileSize $fileSize)
-}
-Write-Host ("{0:N2} Mbit/sec" -f ($time/$testCount))
-$ipv4 = (Get-NetIPAddress | Where-Object {$_.AddressState -eq "Preferred" -and $_.ValidLifetime -lt "24:00:00"}).IPAddress
+try {
+    for ($i=0; $i -lt $testCount; $i++){
+        $time = $time + (Measure-NetworkSpeed -f_testFile $testFile -f_fileSize $fileSize)
+    }
+    Write-Host ("{0:N2} Mbit/sec" -f ($time/$testCount))
+    $ipv4 = (Get-NetIPAddress | Where-Object {$_.AddressState -eq "Preferred" -and $_.ValidLifetime -lt "24:00:00"}).IPAddress
 
-# Send to log analytics
-$Properties = [Ordered] @{
-    "PublicIp"      = Get-PublicIp
-    "LocalIps"      = $ipv4
-    "Speed"         = ($time/$testCount)
-    "ComputerName"  = $env:computername
-}
-$speedTest = (New-Object -TypeName "PSObject" -Property $Properties) | ConvertTo-Json
+    # Send to log analytics
+    $Properties = [Ordered] @{
+        "PublicIp"      = Get-PublicIp
+        "LocalIps"      = $ipv4
+        "Speed"         = ($time/$testCount)
+        "ComputerName"  = $env:computername
+    }
+    $speedTest = (New-Object -TypeName "PSObject" -Property $Properties) | ConvertTo-Json
 
-$params = @{
-    f_customerId = $customerId
-    f_sharedKey  = $sharedKey
-    f_body       = ([System.Text.Encoding]::UTF8.GetBytes($speedTest))
-    f_logType    = $logType 
+    $params = @{
+        f_customerId = $customerId
+        f_sharedKey  = $sharedKey
+        f_body       = ([System.Text.Encoding]::UTF8.GetBytes($speedTest))
+        f_logType    = $logType
+    }
+    $logResponse = Send-LogAnalyticsData @params
+    exit 0
 }
-$logResponse = Post-LogAnalyticsData @params
-exit 0
+catch {
+    Write-Error "Speed test failed: $_"
+    exit 1
+}

@@ -1,81 +1,23 @@
-<#PSScriptInfo
-.VERSION 1.0
-.GUID a0c26bb7-e42d-405d-abfb-fc24e123c7b0
-.AUTHOR Jannik Reinhard
-.COMPANYNAME
-.COPYRIGHT
-.TAGS
-.LICENSEURI
-.PROJECTURI https://github.com/JayRHa/Intune-Scripts/blob/main/Get-AllDeviceAssignments/Get-AllDeviceAssignments.ps1
-.ICONURI
-.EXTERNALMODULEDEPENDENCIES 
-.REQUIREDSCRIPTS
-.EXTERNALSCRIPTDEPENDENCIES
-.RELEASENOTES
-.PRIVATEDATA
-
+<#
+.SYNOPSIS
+    Get all assignments from an Intune device
+.DESCRIPTION
+    Retrieves all assignments (group memberships, configuration profiles, and applications)
+    for a specific Intune managed device. Uses Microsoft Graph API via Microsoft.Graph.Authentication.
+.NOTES
+    Author:  Jannik Reinhard (jannikreinhard.com)
+    Version: 1.0
 #>
 
-<# 
+#Requires -Modules Microsoft.Graph.Authentication
 
-.DESCRIPTION 
-  Get all assignments from an Intune device 
-.INPUTS
- None required
-.OUTPUTS
- Assignmments of an specific Intune Device
-.NOTES
- Author: Jannik Reinhard (jannikreinhard.com)
- Twitter: @jannik_reinhard
- Release notes:
-  Version 1.0: Init
-#> 
+Param([string]$User)
 
-Param()
-
-
-
-function Get-AuthToken {
-    [cmdletbinding()]
-    param
-    (
-        [Parameter(Mandatory=$true)]
-        $User
-    )
-
-    $userUpn = New-Object "System.Net.Mail.MailAddress" -ArgumentList $User
-    $tenant = $userUpn.Host
-    $AadModule = Get-Module -Name "AzureAD" -ListAvailable
-    if ($AadModule -eq $null) {
-        Write-Host "AzureAD PowerShell module not found, looking for AzureADPreview"
-        $AadModule = Get-Module -Name "AzureADPreview" -ListAvailable
+function Connect-MgGraphIfNeeded {
+    $context = Get-MgContext
+    if (-not $context) {
+        Connect-MgGraph -Scopes "DeviceManagementManagedDevices.Read.All,Device.Read.All,DeviceManagementConfiguration.Read.All,DeviceManagementApps.Read.All" -NoWelcome
     }
-
-    $adal = Join-Path $AadModule.ModuleBase "Microsoft.IdentityModel.Clients.ActiveDirectory.dll"
-    $adalforms = Join-Path $AadModule.ModuleBase "Microsoft.IdentityModel.Clients.ActiveDirectory.Platform.dll"
-
-    Add-Type -Path $adal
-    Add-Type -Path $adalforms
-    # [System.Reflection.Assembly]::LoadFrom($adal) | Out-Null
-    # [System.Reflection.Assembly]::LoadFrom($adalforms) | Out-Null
-    $clientId = "d1ddf0e4-d672-4dae-b554-9d5bdfd93547"
-    $redirectUri = "urn:ietf:wg:oauth:2.0:oob"
-    $resourceAppIdURI = "https://graph.microsoft.com"
-    $authority = "https://login.microsoftonline.com/$Tenant"
-
-    $authContext = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext" -ArgumentList $authority
-    $platformParameters = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.PlatformParameters" -ArgumentList "Auto"
-    $userId = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier" -ArgumentList ($User, "OptionalDisplayableId")
-    $authResult = $authContext.AcquireTokenAsync($resourceAppIdURI,$clientId,$redirectUri,$platformParameters,$userId).Result
-
-      
-    $authHeader = @{
-        'Content-Type'='application/json'
-        'Authorization'="Bearer " + $authResult.AccessToken
-        'ExpiresOn'=$authResult.ExpiresOn
-        }
-
-    return $authHeader
 }
 
 function Get-GraphCall {
@@ -85,7 +27,12 @@ function Get-GraphCall {
         [Parameter(Mandatory)]
         $method
     )
-    return Invoke-RestMethod -Uri https://graph.microsoft.com/beta/$apiUri -Headers $authToken -Method $method
+    try {
+        return Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/beta/$apiUri" -Method $method
+    } catch {
+        Write-Error "Graph API call failed: $_"
+        return $null
+    }
 }
 
 function Get-Device {
@@ -105,13 +52,13 @@ function Get-GroupMembership {
     )
     $groups = @()
     $deviceId = (Get-GraphCall -method GET -apiUri ("/devices?" + '$filter' + "=deviceId%20eq%20%27$deviceId%27")).value[0].id
-    
+
     $result = Get-GraphCall -method GET -apiUri ("devices/$deviceId/memberOf")
     $result.value | ForEach-Object {$groups += " - $($_.displayName) ($($_.id))"}
 
     $result = Get-GraphCall -method GET -apiUri ("devices/$deviceId/transitiveMemberOf")
     $result.value | ForEach-Object {$groups += " - $($_.displayName) ($($_.id))"}
-    
+
     ($groups | Sort-Object | Get-Unique) | ForEach-Object {Write-Host $_}
 }
 
@@ -123,7 +70,7 @@ function Get-ConfigProfiles {
     $body = @'
     {
         "select": [
-            "PolicyName",
+            "PolicyName"
         ],
         "filter": "((PolicyBaseTypeName eq 'Microsoft.Management.Services.Api.DeviceConfiguration') or (PolicyBaseTypeName eq 'DeviceManagementConfigurationPolicy') or (PolicyBaseTypeName eq 'DeviceConfigurationAdmxPolicy') or (PolicyBaseTypeName eq 'Microsoft.Management.Services.Api.DeviceManagementIntent')) and (IntuneDeviceId eq '
 '@ + $deviceId + @'
@@ -135,7 +82,12 @@ function Get-ConfigProfiles {
         ]
     }
 '@
-    $result = Invoke-RestMethod -Uri "https://graph.microsoft.com/beta/deviceManagement/reports/getConfigurationPoliciesReportForDevice" -Headers $authToken -Method POST -Body $body
+    try {
+        $result = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/reports/getConfigurationPoliciesReportForDevice" -Method POST -Body $body -ContentType "application/json"
+    } catch {
+        Write-Error "Failed to retrieve configuration profiles: $_"
+        return
+    }
     $profiles = @()
     $result.Values | ForEach-Object {$profiles += " - $($_[0])"
     }
@@ -174,13 +126,7 @@ function Get-DeviceInfo {
 #########################################################################################################
 
 #Auth
-if(-not $global:authToken){
-    if($User -eq $null -or $User -eq ""){
-    $User = Read-Host -Prompt "Please specify your user principal name for Azure Authentication"
-    Write-Host
-    }
-    $global:authToken = Get-AuthToken -User $User
-}
+Connect-MgGraphIfNeeded
 
 # Get an device id
 $deviceId = ""
@@ -216,5 +162,4 @@ Write-Host -ForegroundColor Yellow "|          Applications         |"
 Write-Host -ForegroundColor Yellow "---------------------------------"
 Get-Applications -deviceId $deviceId
 Write-Host
-
 

@@ -1,12 +1,17 @@
 <#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Detection-ToastSurveyLogAnalytics
-Description:
-Display a toast notification and write the answer into an log analytics workspace
-Release notes:
-Version 1.0: Init
-#> 
+.SYNOPSIS
+    Display a toast notification survey and log responses to Log Analytics.
+.DESCRIPTION
+    Shows a Windows toast notification with survey options (Yes/Partly/No),
+    registers a custom notification app, creates protocol handler actions,
+    and sends the user response to an Azure Log Analytics workspace.
+.NOTES
+    Author : Jannik Reinhard (jannikreinhard.com)
+    Version: 1.1
+    Release: v1.0 - Init
+             v1.1 - Renamed Create-Action to New-ProtocolAction, fixed empty catch,
+                     changed path to C:\ProgramData\IntuneSurvey
+#>
 
 #https://www.systanddeploy.com/2022/04/toast-notification-to-notify-users-when.html
 Function Register-NotificationApp($AppID,$AppDisplayName) {
@@ -32,11 +37,11 @@ Function Register-NotificationApp($AppID,$AppDisplayName) {
         if (-NOT(Test-Path $regPath)) {
             New-Item -Path $appregPath -Name $AppID -Force | Out-Null
         }
-        $DisplayName = Get-ItemProperty -Path $regPath -Name DisplayName -ErrorAction SilentlyContinue | Select -ExpandProperty DisplayName -ErrorAction SilentlyContinue
+        $DisplayName = Get-ItemProperty -Path $regPath -Name DisplayName -ErrorAction SilentlyContinue | Select-Object -ExpandProperty DisplayName -ErrorAction SilentlyContinue
         if ($DisplayName -ne $AppDisplayName) {
             New-ItemProperty -Path $regPath -Name DisplayName -Value $AppDisplayName -PropertyType String -Force | Out-Null
         }
-        $ShowInSettingsValue = Get-ItemProperty -Path $regPath -Name ShowInSettings -ErrorAction SilentlyContinue | Select -ExpandProperty ShowInSettings -ErrorAction SilentlyContinue
+        $ShowInSettingsValue = Get-ItemProperty -Path $regPath -Name ShowInSettings -ErrorAction SilentlyContinue | Select-Object -ExpandProperty ShowInSettings -ErrorAction SilentlyContinue
         if ($ShowInSettingsValue -ne $ShowInSettings) {
             New-ItemProperty -Path $regPath -Name ShowInSettings -Value $ShowInSettings -PropertyType DWORD -Force | Out-Null
         }
@@ -45,11 +50,11 @@ Function Register-NotificationApp($AppID,$AppDisplayName) {
 		New-ItemProperty -Path $regPath -Name IconBackgroundColor -Value $IconBackgroundColor -PropertyType ExpandString -Force | Out-Null		
 		
     }
-    catch {}
+    catch { Write-Warning "Registry operation failed: $_" }
 }
 
 #https://github.com/damienvanrobaeys/Intune-Proactive-Remediation-scripts/blob/main/Recycle%20Bin%20size%20alert/RecycleBin_Size_Remediation.ps1
-Function Create-Action
+Function New-ProtocolAction
 	{
 		param(
 		$Action_Name		
@@ -57,7 +62,7 @@ Function Create-Action
 		
 		$Main_Reg_Path = "HKCU:\SOFTWARE\Classes\$Action_Name"
 		$Command_Path = "$Main_Reg_Path\shell\open\command"
-		$CMD_Script = "C:\Users\Public\Documents\$Action_Name.cmd"
+		$CMD_Script = "C:\ProgramData\IntuneSurvey\$Action_Name.cmd"
 		New-Item $Command_Path -Force
 		New-ItemProperty -Path $Main_Reg_Path -Name "URL Protocol" -Value "" -PropertyType String -Force | Out-Null
 		Set-ItemProperty -Path $Main_Reg_Path -Name "(Default)" -Value "URL:$Action_Name Protocol" -Force | Out-Null
@@ -82,7 +87,7 @@ $toastLogoPath	= "C:\Windows\ImmersiveControlPanel\images\logo.png"
 #################################################################################################################
 
 # Path
-$scripExecutionPath = "C:\Users\Public\Documents"
+$scripExecutionPath = "C:\ProgramData\IntuneSurvey"
 $tostImagePath = "$env:TEMP\ToastImage.png"
 
 #################################################################################################################
@@ -159,25 +164,25 @@ $actionScriptPost = @'
 		f_logType    = $logType 
 	}
 	$logResponse = Post-LogAnalyticsData @params
-	Remove-Item C:\Users\Public\Documents\ActionYes.ps1 -Force 
-	Remove-Item C:\Users\Public\Documents\ActionPartly.ps1 -Force 
-	Remove-Item C:\Users\Public\Documents\ActionNo.ps1 -Force
-	Remove-Item C:\Users\Public\Documents\ActionYes.cmd -Force 
-	Remove-Item C:\Users\Public\Documents\ActionPartly.cmd -Force 
-	Remove-Item C:\Users\Public\Documents\ActionNo.cmd -Force
+	Remove-Item C:\ProgramData\IntuneSurvey\ActionYes.ps1 -Force 
+	Remove-Item C:\ProgramData\IntuneSurvey\ActionPartly.ps1 -Force 
+	Remove-Item C:\ProgramData\IntuneSurvey\ActionNo.ps1 -Force
+	Remove-Item C:\ProgramData\IntuneSurvey\ActionYes.cmd -Force 
+	Remove-Item C:\ProgramData\IntuneSurvey\ActionPartly.cmd -Force 
+	Remove-Item C:\ProgramData\IntuneSurvey\ActionNo.cmd -Force
 '@
 
 # Call the PS1 with an CMD script
 $actionScriptCmdYes = @'
-Powershell.exe -executionpolicy Bypass -File C:\Users\Public\Documents\ActionYes.ps1
+Powershell.exe -executionpolicy Bypass -File C:\ProgramData\IntuneSurvey\ActionYes.ps1
 '@
 
 $actionScriptCmdPartly = @'
-Powershell.exe -executionpolicy Bypass -File C:\Users\Public\Documents\ActionPartly.ps1
+Powershell.exe -executionpolicy Bypass -File C:\ProgramData\IntuneSurvey\ActionPartly.ps1
 '@
 
 $actionScriptCmdNo = @'
-Powershell.exe -executionpolicy Bypass -File C:\Users\Public\Documents\ActionNo.ps1
+Powershell.exe -executionpolicy Bypass -File C:\ProgramData\IntuneSurvey\ActionNo.ps1
 '@
 
 #################################################################################################################
@@ -187,17 +192,17 @@ Powershell.exe -executionpolicy Bypass -File C:\Users\Public\Documents\ActionNo.
 # Action Yes
 ($actionScriptPre + "Yes" + $actionScriptPost) | out-file "$scripExecutionPath\ActionYes.ps1" -Force -Encoding ASCII
 $actionScriptCmdYes | out-file "$scripExecutionPath\ActionYes.cmd" -Force -Encoding ASCII
-Create-Action -Action_Name ActionYes
+New-ProtocolAction -Action_Name ActionYes
 
 # Action Partly
 ($actionScriptPre + "Partly" + $actionScriptPost) | out-file "$scripExecutionPath\ActionPartly.ps1" -Force -Encoding ASCII
 $actionScriptCmdPartly | out-file "$scripExecutionPath\ActionPartly.cmd" -Force -Encoding ASCII
-Create-Action -Action_Name ActionPartly
+New-ProtocolAction -Action_Name ActionPartly
 
 # Action No
 ($actionScriptPre + "No" + $actionScriptPost) | out-file "$scripExecutionPath\ActionNo.ps1" -Force -Encoding ASCII
 $actionScriptCmdNo | out-file "$scripExecutionPath\ActionNo.cmd" -Force -Encoding ASCII
-Create-Action -Action_Name ActionNo
+New-ProtocolAction -Action_Name ActionNo
 
 
 # Create png file from Base 64 string

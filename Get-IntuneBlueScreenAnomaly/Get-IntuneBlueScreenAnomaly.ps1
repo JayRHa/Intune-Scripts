@@ -1,19 +1,24 @@
-<#
-Version: 1.0
-Author: Jannik Reinhard (jannikreinhard.com)
-Script: Get-IntuneBlueScreenAnomaly
-Description:
-Detect anomaly for BSOD occurrence
-Release notes:
-Version 1.0: Init
-#> 
+<#PSScriptInfo
+.SYNOPSIS
+    Detect anomalies in Blue Screen of Death occurrence across Intune-managed devices.
+.DESCRIPTION
+    Queries Microsoft Graph User Experience Analytics for BSOD metrics, builds a
+    daily time series, and sends it to the Azure Anomaly Detector API. When a
+    positive anomaly is detected a notification is posted to a Teams webhook.
+.NOTES
+    Author : Jannik Reinhard (jannikreinhard.com)
+    Version: 1.1
+    Release: v1.0 - Init
+             v1.1 - Bug fixes, code-quality improvements
+#>
+
 Function Get-AuthHeader{
     param (
         [parameter(Mandatory=$true)]$tenantId,
         [parameter(Mandatory=$true)]$clientId,
         [parameter(Mandatory=$true)]$clientSecret
        )
-    
+
     $authBody=@{
         client_id=$clientId
         client_secret=$clientSecret
@@ -30,7 +35,7 @@ Function Get-AuthHeader{
         'Authorization'="Bearer " + $accessToken.access_token
         'ExpiresOn'=$accessToken.expires_in
     }
-    
+
     return $authHeader
 }
 
@@ -59,14 +64,13 @@ function Send-TeamsWebHook{
     "ContentType" = 'application/json'
     }
 
-    Invoke-RestMethod @parameters | Out-NULL
+    Invoke-RestMethod @parameters | Out-Null
 }
 #################################################################################################
 ########################################### Start ###############################################
 #################################################################################################
 # To be adapted
 $anomalyEndpoint = "https://xxxx.cognitiveservices.azure.com"
-$checks = "Not compliant", "Not evaluated"
 
 # Variables
 $teamWebHookUri = Get-AutomationVariable -Name 'WebHookUri'
@@ -78,7 +82,12 @@ $clientSecret = Get-AutomationVariable -Name 'AppSecret'
 
 # Authentication
 $global:authToken = Get-AuthHeader -tenantId $tenantId -clientId $clientId -clientSecret $clientSecret
-$restartReason = Invoke-RestMethod -Uri ('https://graph.microsoft.com/beta/deviceManagement/userExperienceAnalyticsMetricHistory/?dtFilter=all&$select=metricDateTime,userExperienceAnalyticsMetric&$expand=*') -Headers $authToken -Method GET
+try {
+    $restartReason = Invoke-RestMethod -Uri ('https://graph.microsoft.com/beta/deviceManagement/userExperienceAnalyticsMetricHistory/?dtFilter=all&$select=metricDateTime,userExperienceAnalyticsMetric&$expand=*') -Headers $authToken -Method GET
+} catch {
+    Write-Error "Failed to retrieve BSOD metrics: $_"
+    return
+}
 
 $blueScreenCountDevices = $restartReason.value | Where-Object {$_.userExperienceAnalyticsMetric.id -eq "blueScreenAveragePerDevice"}
 
@@ -92,20 +101,20 @@ $blueScreenCountDevices | ForEach-Object {
 '@ | ConvertFrom-Json
     $blueScreenAveragePerDevice.timestamp = $_.metricDateTime
     $blueScreenAveragePerDevice.value = $_.userExperienceAnalyticsMetric.value
-    
+
     $allBlueScreenAveragePerDevice += $blueScreenAveragePerDevice
 
 }
 
-$allBlueScreenAveragePerDevice = $allBlueScreenAveragePerDevice | Group-Object timestamp | %{
+$allBlueScreenAveragePerDevice = $allBlueScreenAveragePerDevice | Group-Object timestamp | ForEach-Object {
     New-Object psobject -Property @{
         timestamp = $_.Name
         value = ($_.Group | Measure-Object value -Sum).Sum
     }
-} | Sort-Object timestamp -uniqu
+} | Sort-Object timestamp -Unique
 
 $stateCountJson = @'
-{ 
+{
     "series": [],
     "maxAnomalyRatio": 0.40,
     "sensitivity": 95,
@@ -115,9 +124,14 @@ $stateCountJson = @'
 
 
 $stateCountJson.series = $allBlueScreenAveragePerDevice
-    
+
 $authHeader = @{'Ocp-Apim-Subscription-Key'="$anomalyKey"}
-$result = Invoke-RestMethod -Uri "$anomalyEndpoint/anomalydetector/v1.0/timeseries/last/detect" -ContentType 'application/json' -Headers $authHeader -Method POST -Body  ($stateCountJson | ConvertTo-JSON)
+try {
+    $result = Invoke-RestMethod -Uri "$anomalyEndpoint/anomalydetector/v1.0/timeseries/last/detect" -ContentType 'application/json' -Headers $authHeader -Method POST -Body  ($stateCountJson | ConvertTo-JSON)
+} catch {
+    Write-Error "Failed to call Anomaly Detector API: $_"
+    return
+}
 
 if($result.isAnomaly -eq $true -and $result.isPositiveAnomaly -eq $true){
 
@@ -125,7 +139,7 @@ if($result.isAnomaly -eq $true -and $result.isPositiveAnomaly -eq $true){
     $expectedValue = [math]::Round($($result.expectedValue), 2)
     $currentValue = [math]::Round($(($stateCountJson.series[$stateCountJson.series.count -1]).value), 2)
 
-$text  = "`n  
+$text  = "`n
     Anomaly detected for Bluescreen of Death (Avg per device)
     Expected value: $expectedValue
     Current values: $currentValue
