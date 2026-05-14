@@ -38,7 +38,13 @@ function Get-DeviceNameValidated {
         [Parameter(Mandatory = $true)][string]$deviceName,
         [Parameter(Mandatory = $true)][string]$aadDeviceId
     )
-    $currentDeviceId = (Get-MgDevice -Filter "displayName eq '$deviceName'").DeviceId
+    # The device name comes from an HTTP request body and is therefore untrusted user
+    # input. Interpolating it directly into an OData $filter expression allows an
+    # attacker to break out of the string literal and modify the filter. Escape any
+    # single quotes per the OData spec (a literal quote is encoded as two quotes)
+    # before embedding the value.
+    $escapedDeviceName = $deviceName -replace "'", "''"
+    $currentDeviceId = (Get-MgDevice -Filter "displayName eq '$escapedDeviceName'").DeviceId
     if ($currentDeviceId -ne $aadDeviceId) {
         throw "The device name provided is not the same as the current device name"
     }
