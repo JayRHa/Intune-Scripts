@@ -68,6 +68,7 @@ This repository contains **40+ ready-to-use scripts** for Intune administrators 
 | `Hide-TaskViewWidgetsAndSearch/` | Remediation | Hide Task View, Widgets, and Search from taskbar |
 | `Ime-LogSummarizer/` | Diagnostics | AI-powered IME log analysis (local & remote, Python) |
 | `Make-Speedtest/` | Diagnostics | Download speed test with Log Analytics upload |
+| [`ManagementImprovements/`](ManagementImprovements/README.md) | Tenant Mgmt | 10 housekeeping scripts: stale/duplicate devices, config backup, empty groups, unused filters, BitLocker escrow, app success rate, unassigned scripts, tenant health, policy conflicts |
 | `Move-Windows11Taskbar/` | Remediation | Set Windows 11 taskbar alignment to left |
 | `Remove-ApplicabilityRule/` | Device Config | Strip OS applicability rules from all config profiles |
 | `Remove-PrimaryUserFromIntuneDevices/` | Device Mgmt | Remove primary user from managed devices |
