@@ -7,10 +7,10 @@
 
 Script. Deploy. Automate.
 
-[![GitHub stars](https://img.shields.io/github/stars/JayRHa/Intune Scripts?style=for-the-badge&logo=github&color=f4c542)](https://github.com/JayRHa/Intune Scripts/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/JayRHa/Intune Scripts?style=for-the-badge&logo=github&color=4078c0)](https://github.com/JayRHa/Intune Scripts/network/members)
-[![GitHub issues](https://img.shields.io/github/issues/JayRHa/Intune Scripts?style=for-the-badge&logo=github&color=d73a4a)](https://github.com/JayRHa/Intune Scripts/issues)
-[![Contributors](https://img.shields.io/github/contributors/JayRHa/Intune Scripts?style=for-the-badge&logo=github&color=28a745)](https://github.com/JayRHa/Intune Scripts/graphs/contributors)
+[![GitHub stars](https://img.shields.io/github/stars/JayRHa/IntuneScripts?style=for-the-badge&logo=github&color=f4c542)](https://github.com/JayRHa/IntuneScripts/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/JayRHa/IntuneScripts?style=for-the-badge&logo=github&color=4078c0)](https://github.com/JayRHa/IntuneScripts/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/JayRHa/IntuneScripts?style=for-the-badge&logo=github&color=d73a4a)](https://github.com/JayRHa/IntuneScripts/issues)
+[![Contributors](https://img.shields.io/github/contributors/JayRHa/IntuneScripts?style=for-the-badge&logo=github&color=28a745)](https://github.com/JayRHa/IntuneScripts/graphs/contributors)
 
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue?logo=powershell&logoColor=white)](https://docs.microsoft.com/powershell/)
 [![Intune](https://img.shields.io/badge/Microsoft-Intune-0078D4?logo=microsoft&logoColor=white)](https://endpoint.microsoft.com)
