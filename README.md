@@ -15,7 +15,13 @@ Script. Deploy. Automate.
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue?logo=powershell&logoColor=white)](https://docs.microsoft.com/powershell/)
 [![Intune](https://img.shields.io/badge/Microsoft-Intune-0078D4?logo=microsoft&logoColor=white)](https://endpoint.microsoft.com)
 [![Graph API](https://img.shields.io/badge/Microsoft_Graph-API-6264A7?logo=microsoftazure&logoColor=white)](https://graph.microsoft.com)
-[Blog](https://jannikreinhard.com) | [Twitter](https://twitter.com/jannik_reinhard) | [GitHub](https://github.com/JayRHa)
+[Blog](https://jannikreinhard.com) | [X](https://x.com/jannik_reinhard) | [GitHub](https://github.com/JayRHa)
+
+<p>
+  <a href="https://jannikreinhard.com/">Blog</a> ·
+  <a href="https://www.linkedin.com/in/jannik-r/">LinkedIn</a> ·
+  <a href="https://x.com/jannik_reinhard">X</a>
+</p>
 
 ---
 
@@ -196,4 +202,4 @@ All detection and remediation scripts follow this convention:
 
 ## Author
 
-**Jannik Reinhard** -- [Blog](https://jannikreinhard.com) | [Twitter](https://twitter.com/jannik_reinhard) | [GitHub](https://github.com/JayRHa)
+**Jannik Reinhard** -- [Blog](https://jannikreinhard.com) | [X](https://x.com/jannik_reinhard) | [GitHub](https://github.com/JayRHa)
