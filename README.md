@@ -1,3 +1,18 @@
+<!-- repo-standard:start -->
+# Intune Scripts
+
+Collection of practical PowerShell scripts for Microsoft Intune administration and device management.
+
+| Area | Stack | Visibility |
+| --- | --- | --- |
+| Endpoint Management | PowerShell, Microsoft Intune | Public |
+
+**Repository:** `JayRHa/intune-scripts`  
+**Topics:** `microsoft-intune`, `powershell`, `windows`, `scripts`, `endpoint-management`
+<!-- repo-standard:end -->
+
+---
+
 <div align="center">
 
 # Intune-Scripts
