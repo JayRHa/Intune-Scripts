@@ -20,27 +20,46 @@ Script. Deploy. Automate.
 
 ## What is this?
 
-Collection of practical PowerShell scripts for Microsoft Intune administration and device management.
+Intune Scripts supports Microsoft Intune and endpoint management workflows such as automation, troubleshooting, remediation, deployment, or reporting.
 
-> Browse the documentation below for setup notes, usage details, and project-specific context.
+## Project Context
 
----
+- Use it when Intune work should be scripted, packaged, synchronized, or made easier to repeat.
+- Most workflows start from repository assets, then move through Microsoft Graph, Intune, or device-side execution.
+- This repository is maintained as a practical project and reference asset.
+
+## How It Works
+
+The repository stores scripts or tooling, administrators configure or run them, Intune and Microsoft Graph apply the work, and endpoint results feed back into reports or follow-up actions.
+
+```mermaid
+flowchart LR
+    Repo[Repository assets] --> Admin[Administrator workflow]
+    Admin --> Graph[Microsoft Graph or Intune]
+    Graph --> Device[Managed endpoint]
+    Device --> Result[Detection, remediation, or report]
+    Result --> Review[Review and iterate]
+    Review --> Repo
+```
 
 ## Quick Start
 
-1. Review the project documentation below.
+1. Review the project context and workflow below.
 2. Clone the repository:
 
    ```bash
    git clone https://github.com/JayRHa/IntuneScripts.git
    ```
 
-3. Follow the setup, deployment, or usage notes in the preserved documentation section.
+3. Continue with the project-specific documentation in the next section.
 
 ---
 <!-- unified-readme:end -->
 
-## Existing Documentation
+<!-- project-documentation:start -->
+## Project Documentation
+
+The sections below contain the repository-specific setup, usage, and reference material for this project.
 
 <div align="center">
 
