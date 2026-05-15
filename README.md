@@ -1,9 +1,9 @@
 <!-- unified-readme:start -->
 <div align="center">
 
-# Intune Scripts
+# IntuneScripts
 
-**Collection of practical PowerShell scripts for Microsoft Intune administration and device management.**
+**A curated collection of PowerShell (and Python) scripts for Microsoft Intune administration, automation, and device management.**
 
 Script. Deploy. Automate.
 
@@ -11,6 +11,11 @@ Script. Deploy. Automate.
 [![GitHub forks](https://img.shields.io/github/forks/JayRHa/IntuneScripts?style=for-the-badge&logo=github&color=4078c0)](https://github.com/JayRHa/IntuneScripts/network/members)
 [![GitHub issues](https://img.shields.io/github/issues/JayRHa/IntuneScripts?style=for-the-badge&logo=github&color=d73a4a)](https://github.com/JayRHa/IntuneScripts/issues)
 [![Contributors](https://img.shields.io/github/contributors/JayRHa/IntuneScripts?style=for-the-badge&logo=github&color=28a745)](https://github.com/JayRHa/IntuneScripts/graphs/contributors)
+
+[![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue?logo=powershell&logoColor=white)](https://docs.microsoft.com/powershell/)
+[![Intune](https://img.shields.io/badge/Microsoft-Intune-0078D4?logo=microsoft&logoColor=white)](https://endpoint.microsoft.com)
+[![Graph API](https://img.shields.io/badge/Microsoft_Graph-API-6264A7?logo=microsoftazure&logoColor=white)](https://graph.microsoft.com)
+[Blog](https://jannikreinhard.com) | [Twitter](https://twitter.com/jannik_reinhard) | [GitHub](https://github.com/JayRHa)
 
 ---
 
@@ -20,7 +25,7 @@ Script. Deploy. Automate.
 
 ## What is this?
 
-Intune Scripts supports Microsoft Intune and endpoint management workflows such as automation, troubleshooting, remediation, deployment, or reporting.
+IntuneScripts supports Microsoft Intune and endpoint management workflows such as automation, troubleshooting, remediation, deployment, or reporting.
 
 ## Project Context
 
@@ -42,40 +47,8 @@ flowchart LR
     Review --> Repo
 ```
 
-## Quick Start
-
-1. Review the project context and workflow below.
-2. Clone the repository:
-
-   ```bash
-   git clone https://github.com/JayRHa/IntuneScripts.git
-   ```
-
-3. Continue with the project-specific documentation in the next section.
-
 ---
 <!-- unified-readme:end -->
-
-<!-- project-documentation:start -->
-## Project Documentation
-
-The sections below contain the repository-specific setup, usage, and reference material for this project.
-
-<div align="center">
-
-# IntuneScripts
-
-**A curated collection of PowerShell (and Python) scripts for Microsoft Intune administration, automation, and device management.**
-
-[![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue?logo=powershell&logoColor=white)](https://docs.microsoft.com/powershell/)
-[![Intune](https://img.shields.io/badge/Microsoft-Intune-0078D4?logo=microsoft&logoColor=white)](https://endpoint.microsoft.com)
-[![Graph API](https://img.shields.io/badge/Microsoft_Graph-API-6264A7?logo=microsoftazure&logoColor=white)](https://graph.microsoft.com)
-
-[Blog](https://jannikreinhard.com) | [Twitter](https://twitter.com/jannik_reinhard) | [GitHub](https://github.com/JayRHa)
-
-</div>
-
----
 
 ## Overview
 
