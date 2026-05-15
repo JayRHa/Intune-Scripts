@@ -20,7 +20,7 @@ Script. Deploy. Automate.
 
 ## What is this?
 
-This repository provides collection of practical PowerShell scripts for Microsoft Intune administration and device management.
+Collection of practical PowerShell scripts for Microsoft Intune administration and device management.
 
 > Browse the documentation below for setup notes, usage details, and project-specific context.
 
@@ -44,7 +44,7 @@ This repository provides collection of practical PowerShell scripts for Microsof
 
 <div align="center">
 
-# Intune-Scripts
+# IntuneScripts
 
 **A curated collection of PowerShell (and Python) scripts for Microsoft Intune administration, automation, and device management.**
 
@@ -135,7 +135,7 @@ This repository contains **40+ ready-to-use scripts** for Intune administrators 
 ```powershell
 # Clone the repository
 git clone https://github.com/JayRHa/IntuneScripts.git
-cd Intune-Scripts
+cd IntuneScripts
 
 # Example: Check Autopilot prerequisites on a device
 .\Check-AutopilotPrerequisites\Check-AutopilotPrerequisites.ps1
