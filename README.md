@@ -1,3 +1,48 @@
+<!-- unified-readme:start -->
+    <div align="center">
+
+    # Intune Scripts
+
+    **Collection of practical PowerShell scripts for Microsoft Intune administration and device management.**
+
+    Script. Deploy. Automate.
+
+    [![GitHub stars](https://img.shields.io/github/stars/JayRHa/IntuneScripts?style=for-the-badge&logo=github&color=f4c542)](https://github.com/JayRHa/IntuneScripts/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/JayRHa/IntuneScripts?style=for-the-badge&logo=github&color=4078c0)](https://github.com/JayRHa/IntuneScripts/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/JayRHa/IntuneScripts?style=for-the-badge&logo=github&color=d73a4a)](https://github.com/JayRHa/IntuneScripts/issues)
+[![Contributors](https://img.shields.io/github/contributors/JayRHa/IntuneScripts?style=for-the-badge&logo=github&color=28a745)](https://github.com/JayRHa/IntuneScripts/graphs/contributors)
+
+    ---
+
+    `Endpoint Management` | `PowerShell` | `Public` | `Maintained`
+
+    </div>
+
+    ## What is this?
+
+    This repository contains collection of practical PowerShell scripts for Microsoft Intune administration and device management.
+
+    > Browse the documentation below for setup notes, usage details, and project-specific context.
+
+    ---
+
+    ## Quick Start
+
+    1. Review the project documentation below.
+2. Clone the repository:
+
+   ```bash
+   git clone https://github.com/JayRHa/IntuneScripts.git
+   ```
+
+3. Follow the setup, deployment, or usage notes in the preserved documentation section.
+
+    ---
+    <!-- unified-readme:end -->
+
+
+## Existing Documentation
+
 <div align="center">
 
 # Intune-Scripts
@@ -90,7 +135,7 @@ This repository contains **40+ ready-to-use scripts** for Intune administrators 
 
 ```powershell
 # Clone the repository
-git clone https://github.com/JayRHa/Intune-Scripts.git
+git clone https://github.com/JayRHa/IntuneScripts.git
 cd Intune-Scripts
 
 # Example: Check Autopilot prerequisites on a device
